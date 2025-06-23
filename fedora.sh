@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+# TODO: add nerd font + tela icon theme
+
 # Automatization script for fedora post install sequences.
 # Use "-i" to install packages and extensions.
 # Use "-c" to configure fedora after the install part of this script.
@@ -15,24 +17,24 @@ de=
 
 # packages
 nvidia_drivers="akmod-nvidia"
-dependencies="dconf dconf-editor git gh make typescript gettext just libgtop2-devel glib2-devel lm_sensors sass"
+dependencies="dconf dconf-editor git gh make typescript gettext just libgtop2-devel glib2-devel lm_sensors sass meson"
 terminal="zsh"
-apps="keepassxc codium evolution solaar"
-fonts="droidsansmono-nerd-fonts"
+apps="keepassxc code evolution solaar"
+fonts=
 games="steam lutris discord"
-themes="tela-icon-theme"
+themes=
 
 install()
 {
     collect_system_info
-	install_dependencies
+    install_dependencies
+    update_firmware
     source ~/scripts/monitors.sh
     [[ $chassis == "desktop" ]] && source ~/scripts/mount_game_drive.sh
     source ~/scripts/git.sh
     source ~/scripts/nas.sh
+    add_vscode_rpm
     install_packages
-    [[ $chassis == "laptop" ]] && source ~/scripts/tuxedo.sh
-    update_firmware
     [[ $de == "gnome" ]] && source ~/scripts/gnome-config.sh -i
     reboot_machine
 }
@@ -44,26 +46,10 @@ configure()
     hardware_acceleration
     update_mulimedia_codec
     optimizations
+    [[ $chassis == "laptop" ]] && source ~/scripts/tuxedo.sh
     get_wallpaper
     [[ $de == "gnome" ]] && source ~/scripts/gnome.sh -c
     reboot_machine
-}
-main_menu()
-{
-    if [ $FEDORA_POST_INSTALL -eq 0 ]
-    then
-        install
-    elif [ $FEDORA_POST_INSTALL -eq 1 ]
-    then
-        configure
-    elif [ $FEDORA_POST_INSTALL -eq 2 ]
-    then
-        echo "The script is finished, nothing else to do..."
-        exit 1
-    else
-        echo "SCRIPT SEQUENCE NOT KNOWN... exiting !"
-        exit 1
-    fi
 }
 
 collect_system_info()
@@ -80,6 +66,13 @@ install_dependencies()
     echo "FAS> Installing dependencies..."
     sudo dnf update -y
     sudo dnf install -y $dependencies
+}
+
+add_vscode_rpm()
+{
+    sudo rpm --import https://packages.microsoft.com/keys/microsoft.asc
+    echo -e "[code]\nname=Visual Studio Code\nbaseurl=https://packages.microsoft.com/yumrepos/vscode\nenabled=1\nautorefresh=1\ntype=rpm-md\ngpgcheck=1\ngpgkey=https://packages.microsoft.com/keys/microsoft.asc" | sudo tee /etc/yum.repos.d/vscode.repo > /dev/null
+    sudo dnf check-update
 }
 
 install_packages()

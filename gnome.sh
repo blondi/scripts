@@ -44,11 +44,11 @@ install_extensions()
     case $( cat /etc/os-release | grep ^ID= | cut -d "=" -f2 ) in
         *"arch"*)
             sudo pacman -Syu
-            sudo pacman -S --needed gnome-tweaks gnome-theme-extra
+            sudo pacman -S --needed gnome-tweaks gnome-themes-extra
             ;;
         *"fedora"*)
             sudo dnf update -y
-            sudo dnf install -y gnome-tweaks gnome-theme-extra
+            sudo dnf install -y gnome-tweaks gnome-themes-extra
             ;;
         *)
             echo "Unsupported distro !"
@@ -60,7 +60,7 @@ install_extensions()
 
     install_extension_weather
     install_extension_medial_control
-	install_extension_blur_my_shell
+    install_extension_blur_my_shell
     install_extension_gsconnect
     install_extension_gnome_shell_extensions
     install_extension_search
@@ -126,11 +126,13 @@ install_extension_blur_my_shell()
 install_extension_gsconnect()
 {
     echo "=> Installing GSConnect..."
-    install_extension_from_zip "https://github.com/GSConnect/gnome-shell-extension-gsconnect/releases/latest/download/gsconnect@andyholmes.github.io.zip"
+    gs_release=$( echo $( curl -sL https://github.com/GSConnect/gnome-shell-extension-gsconnect/releases/latest/ ) | sed -e 's/.*<title>//' -e 's/<\/title>.*//' | grep -o 'v[0-9]\{2,3\}' )
+    install_extension_from_zip "https://github.com/GSConnect/gnome-shell-extension-gsconnect/releases/download/$gs_release/gsconnect@andyholmes.github.io.$gs_release.zip"
 }
 
 install_extension_gnome_shell_extensions()
 {
+    echo "=> Installing Gnome Shell Extensions..."
     gnome_shell_extensions=(
         "auto-move-windows@gnome-shell-extensions.gcampax.github.com.shell-extension.zip"
         "drive-menu@gnome-shell-extensions.gcampax.github.com.shell-extension.zip"
@@ -143,11 +145,11 @@ install_extension_gnome_shell_extensions()
     archive=$extensions.zip
 
     cd ~
-    curl -sL -o $archive "https://gitlab.gnome.org/GNOME/gnome-shell-extensions/-/archive/$gnome_version/$extensions.zip"
+    curl -sL -o $archive "https://gitlab.gnome.org/GNOME/gnome-shell-extensions/-/archive/$gnome_version/$archive"
     unzip $archive
 
     cd $extensions
-    source ./export-zips.sh
+    ./export-zips.sh
     cd zip-files
 
     for i in ${gnome_shell_extensions[@]}
@@ -184,7 +186,7 @@ apply_settings()
     then
         dconf write /org/gnome/desktop/background/picture-uri "'file:///usr/share/backgrounds/astronaut.png'"
         dconf write /org/gnome/desktop/background/picture-uri-dark "'file:///usr/share/backgrounds/astronaut.png'"
-    if
+    fi
     dconf write /org/gnome/desktop/input-sources/sources "[('xkb', 'be')]"
     dconf write /org/gnome/desktop/interface/accent-color "'orange'"
     dconf write /org/gnome/desktop/interface/clock-format "'24h'"
@@ -313,15 +315,13 @@ then
     echo "Parameter required!"
     echo
     return 2
-elif [ $1 == "-i" ]
+elif [[ $1 == "-i" ]]
 then
     install_gnome_requirements
-    echo
-elif [ $1 == "-c" ]
+elif [[ $1 == "-c" ]]
+then
     configure_gnome
-    echo
 else
     echo "Parameter unknown!"
-    echo
     return 2
 fi
