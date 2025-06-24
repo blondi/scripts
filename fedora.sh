@@ -27,13 +27,13 @@ themes=
 install()
 {
     collect_system_info
+    configure_repos
     install_dependencies
     update_firmware
     source ~/scripts/monitors.sh
     [[ $chassis == "desktop" ]] && source ~/scripts/mount_game_drive.sh
     source ~/scripts/git.sh
     source ~/scripts/nas.sh
-    add_vscode_rpm
     install_packages
     [[ $de == "gnome" ]] && source ~/scripts/gnome-config.sh -i
     reboot_machine
@@ -56,9 +56,32 @@ collect_system_info()
 {
     echo "FAS> Collecting system info..."
     system_info=$( source ~/scripts/system_info.sh)
-    cpu=$( echo -e $system_info | grep CPU)
-    gpu=$( echo -e $system_info | grep GPU)
-    de=$( echo -e $system_info | grep DE)
+    cpu=$( echo -e "$system_info" | grep CPU | cut -d "=" -f2 )
+    gpu=$( echo -e "$system_info" | grep GPU | cut -d "=" -f2 )
+    de=$( echo -e "$system_info" | grep DE | cut -d "=" -f2 )
+}
+
+configure_repos()
+{
+    # remove pyCharm repo
+    echo "FAS> Removing PyCharm repo..."
+    sudo rm /etc/yum.repos.d/_copr\:copr.fedorainfracloud.org\:phracek\:PyCharm.repo
+    # rpm fusions
+    echo "FAS> Installing rpm fusions repo..."
+    sudo dnf install -y https://download1.rpmfusion.org/free/fedora/rpmfusion-free-release-$(rpm -E %fedora).noarch.rpm
+    sudo dnf install -y https://download1.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-$(rpm -E %fedora).noarch.rpm
+    # vs code
+    sudo rpm --import https://packages.microsoft.com/keys/microsoft.asc
+    echo -e "[code]\nname=Visual Studio Code\nbaseurl=https://packages.microsoft.com/yumrepos/vscode\nenabled=1\nautorefresh=1\ntype=rpm-md\ngpgcheck=1\ngpgkey=https://packages.microsoft.com/keys/microsoft.asc" | sudo tee /etc/yum.repos.d/vscode.repo > /dev/null
+    # upgrade
+    echo "FAS> Updating system..."
+    sudo dnf check-update -y
+    sudo dnf group upgrade -y core
+    # flatpack
+    # flatpak
+    echo "FAS> Installing flatpak repo..."
+    sudo dnf install -y flatpak
+    flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
 }
 
 install_dependencies()
@@ -68,32 +91,9 @@ install_dependencies()
     sudo dnf install -y $dependencies
 }
 
-add_vscode_rpm()
-{
-    sudo rpm --import https://packages.microsoft.com/keys/microsoft.asc
-    echo -e "[code]\nname=Visual Studio Code\nbaseurl=https://packages.microsoft.com/yumrepos/vscode\nenabled=1\nautorefresh=1\ntype=rpm-md\ngpgcheck=1\ngpgkey=https://packages.microsoft.com/keys/microsoft.asc" | sudo tee /etc/yum.repos.d/vscode.repo > /dev/null
-    sudo dnf check-update
-}
-
 install_packages()
 {
-    # remove pyCharm repo
-    echo "FAS> Removing PyCharm repo..."
-    sudo rm /etc/yum.repos.d/_copr\:copr.fedorainfracloud.org\:phracek\:PyCharm.repo
-    # rpm fusions
-    echo "FAS> Installing rpm fusions repo..."
-    sudo dnf install -y https://download1.rpmfusion.org/free/fedora/rpmfusion-free-release-$(rpm -E %fedora).noarch.rpm
-    sudo dnf install -y https://download1.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-$(rpm -E %fedora).noarch.rpm
-    # upgrade
-    echo "FAS> Updating system and installing packages..."
-    sudo dnf check-update -y
-    sudo dnf group upgrade -y core
-    sudo dnf update -y
     sudo dnf install -y $terminal $apps $games $fonts $themes
-    # flatpak
-    echo "FAS> Installing flatpak..."
-    sudo dnf install -y flatpak
-    flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
     flatpak install -y flathub com.spotify.Client
 }
 
