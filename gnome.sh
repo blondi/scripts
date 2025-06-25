@@ -210,15 +210,9 @@ apply_settings()
 
     # weather
     dconf write /org/gnome/shell/extensions/weatherornot/position "'clock-right-centered'"
-    
-    # search light
-    dconf write /org/gnome/shell/extensions/search-light/show-panel-icon false
-    dconf write /org/gnome/shell/extensions/search-light/shortcut-search "['<Control><Alt>s']"
-    dconf write /org/gnome/shell/extensions/search-light/popup-at-cursor-monitor true
-    dconf write /org/gnome/shell/extensions/search-light/border-thickness 1
-    dconf write /org/gnome/shell/extensions/search-light/border-radius 1.16
-    dconf write /org/gnome/shell/extensions/search-light/use-animations false
-    dconf write /org/gnome/shell/extensions/search-light/background-color "(0.0, 0.0, 0.0, 0.50)"
+
+    # system info
+    dconf write /org/gnome/shell/extensions/system-monitor/show-swap false
 
     # media control
     dconf write /org/gnome/shell/extensions/mediacontrols/show-control-icons-seek-backward false
