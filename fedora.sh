@@ -20,9 +20,7 @@ nvidia_drivers="akmod-nvidia"
 dependencies="dconf dconf-editor git gh make typescript gettext just libgtop2-devel glib2-devel lm_sensors sass meson"
 terminal="zsh"
 apps="keepassxc code evolution solaar"
-fonts=
 games="steam lutris discord"
-themes=
 
 install()
 {
@@ -49,6 +47,7 @@ configure()
     [[ $chassis == "laptop" ]] && source ~/scripts/tuxedo.sh
     get_wallpaper
     get_icons
+    get_font
     [[ $de == "gnome" ]] && source ~/scripts/gnome.sh -c
     reboot_machine
 }
@@ -94,7 +93,7 @@ install_dependencies()
 
 install_packages()
 {
-    sudo dnf install -y $terminal $apps $games $fonts $themes
+    sudo dnf install -y $terminal $apps $games
     flatpak install -y flathub com.spotify.Client
 }
 
@@ -178,6 +177,16 @@ get_icons()
     ./install.sh grey
     cd ..
     rm -rf ./Tela-icon-theme
+}
+
+get_font()
+{
+    cd ~
+    mkdir -p ~/.local/share/fonts/meslo
+    sudo curl -sL -o font.zip https://github.com/ryanoasis/nerd-fonts/releases/latest/download/Meslo.zip
+    unzip font.zip -d ~/.local/share/fonts/meslo/
+    rm font.zip
+    fc-cache -v
 }
 
 clear
