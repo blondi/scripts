@@ -63,7 +63,6 @@ install_extensions()
     install_extension_blur_my_shell
     install_extension_gsconnect
     install_extension_gnome_shell_extensions
-    install_extension_search
     install_extension_pop_shell
 }
 
@@ -161,12 +160,6 @@ install_extension_gnome_shell_extensions()
     cd ~
     rm -rf ./$extensions
     rm $archive
-}
-
-install_extension_search()
-{
-    echo "=> Installing Search Light..."
-    install_extension_from_git_with_make https://github.com/cryptbrn/search-light.git
 }
 
 install_extension_pop_shell()
@@ -281,7 +274,6 @@ enable_gnome_extensions()
         "auto-move-windows@gnome-shell-extensions.gcampax.github.com"
         "native-window-placement@gnome-shell-extensions.gcampax.github.com"
         "system-monitor@gnome-shell-extensions.gcampax.github.com"
-        "search-light@icedman.github.com"
         "pop-shell@system76.com"
         "appindicatorsupport@rgcjonas.gmail.com"
         "gsconnect@andyholmes.github.io"
