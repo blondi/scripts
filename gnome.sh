@@ -9,7 +9,7 @@
 update_gdm_resolution()
 {
     echo "Updating GDM resolution..."
-    if [ -f ~/.config/monitors.xml ]
+    if ! [ -f ~/.config/monitors.xml ]
     then
         echo "=> file ~/.config/monitors.xml not found!"
         return 1
@@ -34,7 +34,7 @@ add_nas_bookmarks()
     nas_sub_location=$( ls -A $nas_location )
     for folder in ${nas_sub_location[@]}
     do
-        echo "file://$folder nas-${folder##*/}" | sudo dd of=~/.config/gtk-3.0/bookmarks oflag=append conv=notrunc status=none
+        echo "file://$nas_location$folder nas-${folder##*/}" | sudo dd of=~/.config/gtk-3.0/bookmarks oflag=append conv=notrunc status=none
     done
 }
 
@@ -193,7 +193,7 @@ apply_settings()
     dconf write /org/gnome/desktop/interface/clock-show-weekday true
     dconf write /org/gnome/desktop/interface/color-scheme "'prefer-dark'"
     dconf write /org/gnome/desktop/interface/gtk-theme "'Adwaita-dark'"
-    dconf write /org/gnome/desktop/interface/icon-theme "'Tela'"
+    dconf write /org/gnome/desktop/interface/icon-theme "'Tela-grey'"
     dconf write /org/gnome/desktop/interface/show-battery-percentage true
     dconf write /org/gnome/desktop/peripherals/mouse/accel-profile "'flat'"
     dconf write /org/gnome/desktop/peripherals/mouse/speed 0.0

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-# TODO: add nerd font + tela icon theme
+# TODO: add nerd font
 
 # Automatization script for fedora post install sequences.
 # Use "-i" to install packages and extensions.
@@ -35,7 +35,7 @@ install()
     source ~/scripts/git.sh
     source ~/scripts/nas.sh
     install_packages
-    [[ $de == "gnome" ]] && source ~/scripts/gnome-config.sh -i
+    [[ $de == "gnome" ]] && source ~/scripts/gnome.sh -i
     reboot_machine
 }
 
@@ -48,6 +48,7 @@ configure()
     optimizations
     [[ $chassis == "laptop" ]] && source ~/scripts/tuxedo.sh
     get_wallpaper
+    get_icons
     [[ $de == "gnome" ]] && source ~/scripts/gnome.sh -c
     reboot_machine
 }
@@ -166,6 +167,17 @@ get_wallpaper()
 {
     echo "FAS> Downloading wallpaper..."
     sudo curl -sL -o /usr/share/backgrounds/astronaut.png https://raw.githubusercontent.com/orangci/walls/main/astronaut.png
+}
+
+get_icons()
+{
+    echo "FAS> Installing icons pack..."
+    cd ~
+    git clone https://github.com/vinceliuice/Tela-icon-theme.git
+    cd ./Tela-icon-theme
+    ./install.sh grey
+    cd ..
+    rm -rf ./Tela-icon-theme
 }
 
 clear
