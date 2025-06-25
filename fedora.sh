@@ -103,7 +103,7 @@ update_firmware()
     sudo fwupdmgr refresh --force
     sudo fwupdmgr get-devices
     sudo fwupdmgr get-updates
-    sudo fwupdmgr update
+    sudo fwupdmgr update -y --no-reboot-check
 }
 
 reboot_machine()
@@ -188,7 +188,7 @@ get_font()
     mkdir -p ~/.local/share/fonts/meslo
     sudo curl -sL -o font.zip https://github.com/ryanoasis/nerd-fonts/releases/latest/download/Meslo.zip
     unzip font.zip -d ~/.local/share/fonts/meslo/
-    rm font.zip
+    rm -f ./font.zip
     fc-cache -v
 }
 

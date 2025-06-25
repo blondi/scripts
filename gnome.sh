@@ -8,7 +8,7 @@
 
 update_gdm_resolution()
 {
-    echo "Updating GDM resolution..."
+    echo "GNOME> Updating GDM resolution..."
     if ! [ -f ~/.config/monitors.xml ]
     then
         echo "=> file ~/.config/monitors.xml not found!"
@@ -22,7 +22,7 @@ update_gdm_resolution()
 
 add_nas_bookmarks()
 {
-    echo "Adding NAS bookmarks..."
+    echo "GNOME> Adding NAS bookmarks..."
     nas_location="/mnt/nas/"
     
     if [[ ! -d $nas_location || ! -n $( ls -A $nas_location ) ]]
@@ -40,7 +40,7 @@ add_nas_bookmarks()
 
 install_extensions()
 {
-    echo "Updating system and installing gnome tools..."
+    echo "GNOME> Updating system and installing gnome tools..."
     case $( cat /etc/os-release | grep ^ID= | cut -d "=" -f2 ) in
         *"arch"*)
             sudo pacman -Syu
@@ -170,7 +170,7 @@ install_extension_pop_shell()
 
 apply_settings()
 {
-    echo "Applying settings..."
+    echo "GNOME> Applying settings..."
 
     weatherlocation="[<(uint32 2, <('Ottignies', '', false, [(0.88429474975634159, 0.079744969689317949)], @a(dd) [])>)>]"
     
@@ -260,7 +260,7 @@ apply_settings()
 
 enable_gnome_extensions()
 {
-    echo "Enabling extensions..."
+    echo "GNOME> Enabling extensions..."
     extensions=(
         "weatherornot@somepaulo.github.io"
         "mediacontrols@cliffniff.github.com"
