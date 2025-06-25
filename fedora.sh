@@ -132,7 +132,7 @@ install_graphic_driver()
 hardware_acceleration()
 {
     echo "FAS> Configuring hardware acceleration..."
-    sudo dnf install -y ffmpeg-libs libva libva-utils
+    sudo dnf install -y ffmpeg-libs libva libva-utils --allowerasing
     case $cpu in
         "intel")
             sudo dnf swap -y libva-intel-media-driver intel-media-driver --allowerasing
@@ -183,6 +183,7 @@ get_icons()
 
 get_font()
 {
+    echo "FAS> Installing nerd font..."
     cd ~
     mkdir -p ~/.local/share/fonts/meslo
     sudo curl -sL -o font.zip https://github.com/ryanoasis/nerd-fonts/releases/latest/download/Meslo.zip
