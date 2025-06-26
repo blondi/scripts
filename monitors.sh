@@ -58,5 +58,5 @@ EOF
 
 echo "MON> Updating monitor settings..."
 chassis=$( hostnamectl chassis )
-my_mon_settings=$( if [[ $chassis == "desktop" ]] ; then echo $desktop ; elif [[ $chassis == "laptop" ]] ; then echo $laptop ; fi )
+my_mon_settings=$( if [[ $chassis == "desktop" ]] ; then echo -e "$desktop" ; elif [[ $chassis == "laptop" ]] ; then echo -e "$laptop" ; fi )
 echo -e "$my_mon_settings" | sudo dd of=~/.config/monitors.xml status=none
