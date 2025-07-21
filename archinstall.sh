@@ -6,6 +6,7 @@
 
 # computer type
 chassis=$( hostnamectl chassis )
+net_interface=$( ls /sys/class/net | grep -v "lo" )
 
 # system detecion
 system_info=
@@ -13,21 +14,29 @@ cpu=
 gpu=
 de=
 
+################
+# INSTALLATION #
+################
+
 init_install()
 {
     set_keyboard_layout
     set_font_size
     [[ $chassis == "laptop" ]] && wifi_connect
     change_root_password
-    download_scripts
+    #download_scripts
     set_timezone
 }
 
 continue_install()
 {
-    configure_disks
-    collect_system_info
-    reboot_machine
+    format_disks
+    mirrors_list
+    install_packages
+    generate_file_system_table
+    archroot
+    #collect_system_info
+    #reboot_machine
 }
 
 set_keyboard_layout()
@@ -62,11 +71,11 @@ wifi_connect()
     #[iwd] station name [connect|connect-hidden] SSID
     wifipass=
     ssid=
-    iwctl station wlan0 scan
-    iwctl station wlan0 get-networks
+    iwctl station $net_interface scan
+    iwctl station $net_interface get-networks
     read -p "Enter SSID: " ssid
     read -p "Enter WiFi passphrase: " -s wifipass
-    iwctl --passphrase $wifipass station wlan0 connect $ssid
+    iwctl --passphrase $wifipass station $net_interface connect $ssid
     wifipass=
     ssid=
     ping -c3 www.archlinux.org
@@ -89,13 +98,11 @@ set_timezone()
 
 prepare_ssh()
 {
-    #ssh root@ip_address
-    #todo : check lan name instead of wlan0 if desktop profile
-    ipaddress=$( ip a l wlan0 | awk '/inet / {print $2}' | cut -d '/' -f1 )
-    echo -e "The installation is ready for SSH here : root@$ipaddress"
+    ipaddress=$( ip a l $net_interface | awk '/inet / {print $2}' | cut -d '/' -f1 )
+    echo -e "Connect with ssh using : ssh root@$ipaddress"
 }
 
-configure_disks()
+format_disks()
 {
     lsblk -f #identify disk to use
     echo -n "Enter disk name to use (/dev/[disk_name]): "
@@ -107,7 +114,7 @@ configure_disks()
     partprobe $disk
 
     #Overwrite existing data with zeros
-    dd if=/dev/zero of=/$disk oflag=direct bs=4096 status=progress
+    dd if=/dev/zero of=/$disk oflag=direct bs=1M status=progress
 
     #use 512MiB if grub for ef00
     sgdisk -n 1:0:+1GiB -t 1:ef00 -c 1:ESP -n 2:0:0 -t 2:8309 -c 2:LUKS $disk
@@ -145,29 +152,48 @@ configure_disks()
     mount ${disk}1 /mnt/boot
 }
 
-#[MIRROR LIST]
-reflector --save /etc/pacman.d/mirrorlist --country Belgium,Germany --protocol https --latest 5 --sort rate 
+mirrors_list()
+{
+    reflector --save /etc/pacman.d/mirrorlist --country Belgium,Germany --protocol https --latest 5 --sort rate
+}
 
-#[PACKAGES]
-pacstrap /mnt base base-devel linux linux-headers linux-firmware btrfs-progs cryptsetup lvm2 intel-ucode git neovim
+install_packages()
+{
+    #todo : include microcode for amd as well based on CPU detection
+    pacstrap /mnt base base-devel linux linux-headers linux-firmware btrfs-progs cryptsetup lvm2 intel-ucode git neovim
+}
 
-#[FSTAB]
-genfstab -U -p /mnt >> /mnt/etc/fstab
+generate_file_system_table()
+{
+    genfstab -U -p /mnt >> /mnt/etc/fstab
+}
 
-#[STEP INTO SYSTEM]
-arch-chroot /mnt /bin/bash
+archroot()
+{
+    #step into the system
+    arch-chroot /mnt /bin/bash
+}
 
-#------------------------------------------------------------------------------------------------------------
+#################
+# CONFIGURATION #
+#################
 
-######################
-# POST-CONFIGURATION #
-######################
+configure()
+{
+    configure_pacman
+}
 
-#[PACMAN]
-#/etc/pacman.conf
-#ILoveCandy
-#Color
-#[multilib]
+configure_pacman()
+{
+    insert_at=$(( $( grep -n "#Color" /etc/pacman.conf | cut -d ":" -f1 ) + 1 ))
+    sed "$insert_at i ILoveCandy" /etc/pacman.conf #ILoveCandy
+    sed -i '/#Color/s/^#//g' /etc/pacman.conf #Color
+
+    #multilib
+    insert_at=$(( $( grep -n "#\[multilib\]" /etc/pacman.conf | cut -d ":" -f1 ) + 1 ))
+    sed -i '/#\[multilib\]/s/^#//g' /etc/pacman.conf #first_line
+    sed "$insert_at s/^#//g" /etc/pacman.conf #second_line
+}
 
 #[DEPENDENCIES]
 pacman -S sudo networkmanager openssh iptables-nft ipset firewalld acpid polkit reflector man-db man-pages zram-generator bash-completion htop ttf-meslo-nerd  terminus-font firefox gnome gnome-tweaks gnome-shell-extensions
