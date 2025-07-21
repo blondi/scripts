@@ -1,105 +1,152 @@
 #!/usr/bin/env bash
 
-###############
-# PREPARATION #
-###############
+# Automatization script for arch linux install sequences.
+# Use "-i" to install packages and extensions.
+# Use "-c" to configure arch linux after the install part of this script.
 
-#[CONSOLE]
-#KEYBOARD LAYOUT
-#localectl list-keymaps | grep be
-loadkeys be-latin1
+# computer type
+chassis=$( hostnamectl chassis )
 
-#FONT SIZE
-#location /sys/share/kbd/consolefonts/
-setfont ter-v24n
+# system detecion
+system_info=
+cpu=
+gpu=
+de=
 
-#[INTERNET CONNECTION]
-#LAN
-#ip link
+init_install()
+{
+    set_keyboard_layout
+    set_font_size
+    [[ $chassis == "laptop" ]] && wifi_connect
+    change_root_password
+    download_scripts
+    set_timezone
+}
 
-#WIFI
-#iwctl (through iwd.service)
-#[iwd] device list
-#[iwd] device [name|adatper] set-property Prowered on
-#[iwd] station name scan
-#[iwd] station name get-networks
-#[iwd] station name [connect|connect-hidden] SSID
-wifipass=
-ssid=
-read -p "Enter SSID: " ssid
-read -p "Enter WiFi passphrase: " -s wifipass
-iwctl --passphrase $wifipass station name connect $ssid
-wifipass=
-ssid=
+continue_install()
+{
+    configure_disks
+    collect_system_info
+    reboot_machine
+}
 
-ping -c www.archlinux.org
+set_keyboard_layout()
+{
+    #localectl list-keymaps | grep be
+    loadkeys be-latin1
+}
 
-#[SSH]
-systemctl start sshd
-#root passwd
-passwd
+set_font_size()
+{
+    #location /sys/share/kbd/consolefonts/
+    setfont ter-v24n
+}
 
-#[SYSTEM CLOCK]
-timedatectl set-timezone Europe/Brussels
-timedatectl set-ntp true
-#timedatectl list-timezones | grep Brussel
-timedatectl status
+collect_system_info()
+{
+    echo "FAS> Collecting system info..."
+    system_info=$( source ~/scripts/system_info.sh)
+    cpu=$( echo -e "$system_info" | grep CPU | cut -d "=" -f2 )
+    gpu=$( echo -e "$system_info" | grep GPU | cut -d "=" -f2 )
+    de=$( echo -e "$system_info" | grep DE | cut -d "=" -f2 )
+}
 
-#[SHOW IP FOR SSH]
-ip a #get ip and log in into the other computer
+wifi_connect()
+{
+    #WIFI
+    #iwctl (through iwd.service)
+    #[iwd] device list
+    #[iwd] device [name|adatper] set-property Prowered on
+    #[iwd] station name scan
+    #[iwd] station name get-networks
+    #[iwd] station name [connect|connect-hidden] SSID
+    wifipass=
+    ssid=
+    iwctl station wlan0 scan
+    iwctl station wlan0 get-networks
+    read -p "Enter SSID: " ssid
+    read -p "Enter WiFi passphrase: " -s wifipass
+    iwctl --passphrase $wifipass station wlan0 connect $ssid
+    wifipass=
+    ssid=
+    ping -c3 www.archlinux.org
+}
 
-#-------------------------------------------------------
+download_scripts()
+{
+    mkdir /root/scripts
+    pacman -Sy git --needed --noconfirm
+    git clone https://github.com/blondi/scripts /root/scripts
+}
 
-#################
-# CONFIGURATION #
-#################
+set_timezone()
+{
+    #timedatectl list-timezones | grep Brussel
+    timedatectl set-timezone Europe/Brussels
+    timedatectl set-ntp true
+    timedatectl status
+}
 
-#ssh root@ip_address
+prepare_ssh()
+{
+    #ssh root@ip_address
+    #todo : check lan name instead of wlan0 if desktop profile
+    ipaddress=$( ip a l wlan0 | awk '/inet / {print $2}' | cut -d '/' -f1 )
+    echo -e "The installation is ready for SSH here : root@$ipaddress"
+}
 
-#[DISKS]
-lsblk -f #identify disk to use
-read -p "Enter disk name to use (/dev/[disk_name]): " disk
+configure_disks()
+{
+    lsblk -f #identify disk to use
+    echo -n "Enter disk name to use (/dev/[disk_name]): "
+    read disk
 
-#wiping all on disk
-wipefs -af $disk
-sgdisk --zap-all --clear $disk
-partprobe $disk
+    #wiping all on disk
+    wipefs -af $disk
+    sgdisk --zap-all --clear $disk
+    partprobe $disk
 
-#Overwrite existing data with random values
-dd if=/dev/zero of=/$disk oflag=direct bs=4096 status=progress
+    #Overwrite existing data with zeros
+    dd if=/dev/zero of=/$disk oflag=direct bs=4096 status=progress
 
-#use 512MiB if grub for ef00
-sgdisk -n 1:0:+1GiB -t 1:ef00 -c 1:ESP -n 2:0:0 -t 2:8309 -c 2:LUKS $disk
-partprobe $disk
-sgdisk -p $disk
+    #use 512MiB if grub for ef00
+    sgdisk -n 1:0:+1GiB -t 1:ef00 -c 1:ESP -n 2:0:0 -t 2:8309 -c 2:LUKS $disk
+    partprobe $disk
+    sgdisk -p $disk
 
-# formatting partitions
-#[LUKS]
-cryptsetup --type luks2 -v -y luksFormat ${disk}p2
-cryptsetup open ${disk}p2 root
-mkfs.vfat -F32 ${disk}p1 #(p1)
-mkfs.btrfs /dev/mapper/root
+    #adding a 'p' to nvme disk for partition reference
+    [[ $disk =~ "nvme" ]] && disk="${disk}p"
 
-mount /dev/mapper/root /mnt
-cd /mnt
-btrfs subvolume create @
-btrfs subvolume create @home
-btrfs subvolume create @.snapshots
-btrfs subvolume create @pkg
-btrfs subvolume create @log
-cd
-unmount /mnt
+    # formatting partitions
+    #[EFI]
+    mkfs.vfat -F32 ${disk}1
 
-mount -o noatime,ssd,compress=zstd,space_cache=v2,discard=async,subvol=@ /dev/mapper/root /mnt
-mkdir -p /mnt/{home,boot,.snapshots,var/cache/pacman/pkg,var/log}
-mount -o noatime,ssd,compress=zstd,space_cache=v2,discard=async,subvol=@home /dev/mapper/root /mnt/home
-mount -o noatime,ssd,compress=zstd,space_cache=v2,discard=async,subvol=@.snapshots /dev/mapper/root /mnt/.snapshots
-mount -o noatime,ssd,compress=zstd,space_cache=v2,discard=async,subvol=@pkg /dev/mapper/root /mnt/var/cache/pacman/pkg
-mount -o noatime,ssd,compress=zstd,space_cache=v2,discard=async,subvol=@log /dev/mapper/root /mnt/var/log
-mount ${disk}p1 /mnt/boot
+    #[LUKS BTRFS]
+    cryptsetup --type luks2 -v -y luksFormat ${disk}2
+    cryptsetup open ${disk}2 root
+
+    mkfs.btrfs /dev/mapper/root
+    mount /dev/mapper/root /mnt
+    cd /mnt
+    btrfs subvolume create @
+    btrfs subvolume create @home
+    btrfs subvolume create @.snapshots
+    btrfs subvolume create @pkg
+    btrfs subvolume create @log
+    cd
+    unmount /mnt
+
+    mount -o noatime,ssd,compress=zstd,space_cache=v2,discard=async,subvol=@ /dev/mapper/root /mnt
+    mkdir -p /mnt/{home,boot,.snapshots,var/cache/pacman/pkg,var/log}
+    mount -o noatime,ssd,compress=zstd,space_cache=v2,discard=async,subvol=@home /dev/mapper/root /mnt/home
+    mount -o noatime,ssd,compress=zstd,space_cache=v2,discard=async,subvol=@.snapshots /dev/mapper/root /mnt/.snapshots
+    mount -o noatime,ssd,compress=zstd,space_cache=v2,discard=async,subvol=@pkg /dev/mapper/root /mnt/var/cache/pacman/pkg
+    mount -o noatime,ssd,compress=zstd,space_cache=v2,discard=async,subvol=@log /dev/mapper/root /mnt/var/log
+    mount ${disk}1 /mnt/boot
+}
 
 #[MIRROR LIST]
-reflector -c Belgium --latest 5 --sort rate --save /etc/pacman.d/mirrorlist
+reflector --save /etc/pacman.d/mirrorlist --country Belgium,Germany --protocol https --latest 5 --sort rate 
 
 #[PACKAGES]
 pacstrap /mnt base base-devel linux linux-headers linux-firmware btrfs-progs cryptsetup lvm2 intel-ucode git neovim
@@ -188,7 +235,7 @@ console-mode max
 editor yes
 EOF
 
-blkid -s UUID -o value ${disk}p2
+blkid -s UUID -o value ${disk}2
 touch /boot/loader/entries/arch.conf
 #insert
 #title Arch Linux (linux)
@@ -205,16 +252,16 @@ bootctl list
 
 #[SYSTEMD-BOOT UPDATE]
 sudo mkdir /etc/pacman.d/hooks
-#create /etc/pacman.d/hooks/100-systemd-boot.hook
+#create /etc/pacman.d/hooks/95-systemd-boot.hook
 #[Trigger]
 #Type = Package
 #Operation = Upgrade
 #Target = systemd
 #
 #[Action]
-#Description = Updating systemd-boot
+#Description = Updating systemd-boot...
 #When = PostTransaction
-#Exec = /usr/bin/bootctl update
+#Exec = /usr/bin/systemctl restart systemd-boot-update.service
 
 
 exit
@@ -257,3 +304,34 @@ sudo timeshift --create --comments "[message]" --tags D
 #[ENV for HYPRLAND config]
 #env = LIBVA_DRIVER_NAME,nvidia
 #env = __GLX_VENDOR_LIBRARY_NAME,nvidia
+
+clear
+echo "###############################"
+echo "# ARCHLINUX automation script #"
+echo "###############################"
+if ! [[ "$1" =~ ^(-i|-c)$ ]]
+then
+    echo "Mode not detected!"
+    echo "Use "-i" to install, "-c" to configure after the install part."
+    exit 2
+elif [[ $1 == "-i" ]]
+then
+    if [ ! -z $2 ]
+    then
+        if [[ $2 == '-ssh' ]]
+        then
+            init_install
+            prepare_ssh
+            exit 1
+        elif [[ $2 == '-r' ]]
+        then
+            continue_install
+            exit 1
+        fi
+    fi
+    init_install
+    continue_install
+elif [[ $1 == "-c" ]]
+then
+    configure
+fi

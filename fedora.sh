@@ -1,7 +1,5 @@
 #!/usr/bin/env bash
 
-# TODO: add nerd font
-
 # Automatization script for fedora post install sequences.
 # Use "-i" to install packages and extensions.
 # Use "-c" to configure fedora after the install part of this script.
