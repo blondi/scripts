@@ -24,19 +24,7 @@ init_install()
     set_font_size
     [[ $chassis == "laptop" ]] && wifi_connect
     change_root_password
-    #download_scripts
     set_timezone
-}
-
-continue_install()
-{
-    format_disks
-    mirrors_list
-    install_packages
-    generate_file_system_table
-    archroot
-    #collect_system_info
-    #reboot_machine
 }
 
 set_keyboard_layout()
@@ -49,15 +37,6 @@ set_font_size()
 {
     #location /sys/share/kbd/consolefonts/
     setfont ter-v24n
-}
-
-collect_system_info()
-{
-    echo "FAS> Collecting system info..."
-    system_info=$( source ~/scripts/system_info.sh)
-    cpu=$( echo -e "$system_info" | grep CPU | cut -d "=" -f2 )
-    gpu=$( echo -e "$system_info" | grep GPU | cut -d "=" -f2 )
-    de=$( echo -e "$system_info" | grep DE | cut -d "=" -f2 )
 }
 
 wifi_connect()
@@ -81,19 +60,36 @@ wifi_connect()
     ping -c3 www.archlinux.org
 }
 
-download_scripts()
-{
-    mkdir /root/scripts
-    pacman -Sy git --needed --noconfirm
-    git clone https://github.com/blondi/scripts /root/scripts
-}
-
 set_timezone()
 {
     #timedatectl list-timezones | grep Brussel
     timedatectl set-timezone Europe/Brussels
     timedatectl set-ntp true
     timedatectl status
+}
+
+continue_install()
+{
+    format_disks
+    mirrors_list
+    install_packages
+    generate_file_system_table
+    archroot
+    configure_pacman
+    set_hostname
+    set_locale
+    set_keyboard
+    set_editor
+    create_user
+    change_root_password
+    download_scripts
+    collect_system_info
+    install_packages
+    enable_services
+    initial_ram_disk_env
+    systemdboot
+    ending
+    #reboot_machine
 }
 
 prepare_ssh()
@@ -174,15 +170,6 @@ archroot()
     arch-chroot /mnt /bin/bash
 }
 
-#################
-# CONFIGURATION #
-#################
-
-configure()
-{
-    configure_pacman
-}
-
 configure_pacman()
 {
     insert_at=$(( $( grep -n "#Color" /etc/pacman.conf | cut -d ":" -f1 ) + 1 ))
@@ -191,111 +178,145 @@ configure_pacman()
 
     #multilib
     insert_at=$(( $( grep -n "#\[multilib\]" /etc/pacman.conf | cut -d ":" -f1 ) + 1 ))
-    sed -i '/#\[multilib\]/s/^#//g' /etc/pacman.conf #first_line
-    sed "$insert_at s/^#//g" /etc/pacman.conf #second_line
+    sed -i '/#\[multilib\]/s/^#//g' /etc/pacman.conf #1st
+    sed "$insert_at s/^#//g" /etc/pacman.conf #2nd
 }
 
-#[DEPENDENCIES]
-pacman -S sudo networkmanager openssh iptables-nft ipset firewalld acpid polkit reflector man-db man-pages zram-generator bash-completion htop ttf-meslo-nerd  terminus-font firefox gnome gnome-tweaks gnome-shell-extensions
-#NVIDIA, add: nvidia-dkms nvidia-utils lib32-nvidia-utils egl-wayland
+set_hostname()
+{
+    hostname="arch"
+    echo $hostname >> /etc/hostname
+    echo "127.0.1.1\t $hostname.localdomain $hostname" >> /etc/hosts
+}
 
-#[HOSTNAME]
-echo "arch" >> /etc/hostname
-#/etc/hosts
-#replace hostname with new hostname on localdomain
-#127.0.0.1 localhost
-#::1 localhost
-#127.0.1.1 <hostname>.localdomain <hostname>
+set_locale()
+{
+    ln -sF /usr/share/zoneinfo/Europe/Brussels /etc/localtime
+    hwclock --systohc
+    sed -i '/#en_US.UTF-8/s/^#//g' /etc/locale.gen
+    echo "LANG=en_US.UTF-8" >> /etc/locale.conf
+    locale-gen
+}
 
-#[LOCALE]
-ln -sF /usr/share/zoneinfo/Europe/Brussels /etc/localtime
-hwclock --systohc
-nvim /etc/locale.gen #=> uncomment en_US.UTF-8
-echo "LANG=en_US.UTF-8" >> /etc/locale.conf
-locale-gen
+set_keyboard()
+{
+    echo "FONT=ter-v22n" >> /etc/vconsole.conf
+    echo "KEYMAP=be-latin1" >> /etc/vconsole.conf
+    echo "XKBLAYOUT=be" >> /etc/vconsole.conf
+}
 
-#[KEYBOARD]
-#/etc/vconsole.conf
-echo "FONT=ter-v22n" >> /etc/vconsole.conf
-echo "KEYMAP=be-latin1" >> /etc/vconsole.conf
-echo "XKBLAYOUT=be" >> /etc/vconsole.conf
+set_editor()
+{
+    echo "EDITOR=nvim" >> /etc/environment
+    echo "VISUAL=nvim" >> /etc/environment
+}
 
-#[EDITOR]
-echo "EDITOR=nvim" >> /etc/environment
-echo "VISUAL=nvim" >> /etc/environment
+create_user()
+{
+    echo -n "New user name: "
+    read user
+    useradd -m -g users -G wheel -s /bin/bash $user
+    passwd $user
+    echo "$user ALL=(ALL:ALL) ALL" >> /etc/sudoers.d/$user
+}
 
-#[ROOTUSER]
-passwd
+change_root_password()
+{
+    passwd root
+}
 
-#[USER]
-useradd -m -g users -G wheel -s /bin/bash blondi
-passwd blondi
-echo "blondi ALL=(ALL:ALL) ALL" >> /etc/sudoers.d/blondi
+download_scripts()
+{
+    mkdir /root/scripts
+    pacman -Sy git --needed --noconfirm
+    git clone https://github.com/blondi/scripts /root/scripts
+}
 
-#[SERVICES]
-systemctl enable NetworkManager #network
-#systemctl enable bluetooth
-#systemctl enable sshd
-#systemctl enable firewalld
-#systemctl enable reflector.timer
-systemctl enable fstrim.timer #optimization ssd
-systemctl enable acpid
-systemctl enable gdm
-#=> for wireless, use nmtui
+collect_system_info()
+{
+    echo "FAS> Collecting system info..."
+    system_info=$( source ~/scripts/system_info.sh)
+    cpu=$( echo -e "$system_info" | grep CPU | cut -d "=" -f2 )
+    gpu=$( echo -e "$system_info" | grep GPU | cut -d "=" -f2 )
+    de=$( echo -e "$system_info" | grep DE | cut -d "=" -f2 )
+}
 
-#[MKINITCPIO]
-vim /etc/mkinitcpio.conf
-MODULES=(btrfs)
-#=> for hyperland only: if nvidia, add also after btrfs nvidia nvidia_modeset nvidia_uvm nvidia_drm ???
-BINARIES=(/usr/bin/btrfs)
-HOOKS=(base udev autodetect microcode modconf kms keyboard keymap consolefont block encrypt lvm2 filesystems fsck)
-#+ move keyboard before autodetect
-mkinitcpio -p linux
+install_packages()
+{
+    packages="sudo networkmanager openssh iptables-nft ipset firewalld acpid polkit reflector man-db man-pages zram-generator bash-completion htop ttf-meslo-nerd terminus-font firefox gnome gnome-tweaks gnome-shell-extensions"
+    [[ $gpu == "nvidia" ]] && packages+=" nvidia-dkms nvidia-utils lib32-nvidia-utils egl-wayland"
+    pacman -S --needed $packages
+}
 
-#[SYSTEMD-BOOT]
-bootctl --esp-path=/boot install
-cat > /boot/loader/loader.conf <<EOF
+enable_services()
+{
+    systemctl enable NetworkManager #network
+    systemctl enable firewalld
+    systemctl enable reflector.timer
+    systemctl enable fstrim.timer #optimization ssd
+    systemctl enable acpid
+    systemctl enable gdm #gnome_desktop_manager
+    #systemctl enable bluetooth
+    #systemctl enable sshd
+    #=> for wireless, use nmtui
+}
+
+initial_ram_disk_env()
+{
+    #=> todo: check for hyperland only: if nvidia, add also after btrfs nvidia nvidia_modeset nvidia_uvm nvidia_drm ???
+    sed "/^MODULES=/ s/([^)]*)/(btrfs)/g" /etc/mkinitcpio.conf
+    sed "/^BINARIES=/ s/([^)]*)/(\/usr\/bin\/btrfs)/g" /etc/mkinitcpio.conf
+    sed "/^HOOKS=/ s/([^)]*)/(base udev autodetect microcode modconf kms keyboard keymap consolefont block encrypt lvm2 filesystems fsck)/g" /etc/mkinitcpio.conf
+    mkinitcpio -p linux
+}
+
+systemdboot()
+{
+    bootctl --esp-path=/boot install
+    cat > /boot/loader/loader.conf <<EOF
 default arch.conf
 timeout 3
 console-mode max
 editor yes
 EOF
 
-blkid -s UUID -o value ${disk}2
-touch /boot/loader/entries/arch.conf
-#insert
-#title Arch Linux (linux)
-#linux /vmlinuz-linux
-#initrd /initramfs-linux.img
-#options cryptdevice=PARTUUID=[PARUUID]:root root=/dev/mapper/root rootflags=subvol=@ rw rootfstype=btrfs
+    diskuuid=$( blkid -s UUID -o value ${disk}2 )
+    cat > /boot/loader/entries/arch.conf <<EOF
+title Arch Linux (linux)
+linux /vmlinuz-linux
+initrd /initramfs-linux.img
+options cryptdevice=PARTUUID=$diskuuid:root root=/dev/mapper/root rootflags=subvol=@ rw rootfstype=btrfs
+EOF
 
-cp /boot/loader/entries/arch.conf /boot/loader/entries/arch-fallback.conf
-#insert
-#title Arch Linux (linux-fallback)
-#initrd /initramfs-linux-fallback.img
+    cp /boot/loader/entries/arch.conf /boot/loader/entries/arch-fallback.conf
+    sed "s/(linux)/(linux-fallback)/g" /boot/loader/entries/arch-fallback.conf
+    sed "s/linux.img/linux-fallback.img/g" /boot/loader/entries/arch-fallback.conf
 
-bootctl list
+    bootctl list
 
-#[SYSTEMD-BOOT UPDATE]
-sudo mkdir /etc/pacman.d/hooks
-#create /etc/pacman.d/hooks/95-systemd-boot.hook
-#[Trigger]
-#Type = Package
-#Operation = Upgrade
-#Target = systemd
-#
-#[Action]
-#Description = Updating systemd-boot...
-#When = PostTransaction
-#Exec = /usr/bin/systemctl restart systemd-boot-update.service
+    #update hook
+    sudo mkdir /etc/pacman.d/hooks
+    cat > /etc/pacman.d/hooks/95-systemd-boot.hook <<EOF
+[Trigger]
+Type = Package
+Operation = Upgrade
+Target = systemd
 
+[Action]
+Description = Updating systemd-boot...
+When = PostTransaction
+Exec = /usr/bin/systemctl restart systemd-boot-update.service
+EOF    
+}
 
-exit
-umount -R /mnt
+ending()
+{
+    exit
+    umount -R /mnt
+    reboot
+}
 
-reboot
 #------------------------------------------------------------------------------------------------
-
 
 #[CHECKS AFTER INSTALL]
 systemctl --failed
@@ -330,6 +351,16 @@ sudo timeshift --create --comments "[message]" --tags D
 #[ENV for HYPRLAND config]
 #env = LIBVA_DRIVER_NAME,nvidia
 #env = __GLX_VENDOR_LIBRARY_NAME,nvidia
+
+
+#################
+# CONFIGURATION #
+#################
+
+configure()
+{
+    
+}
 
 clear
 echo "###############################"
