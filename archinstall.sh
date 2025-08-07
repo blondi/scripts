@@ -21,7 +21,6 @@ de=
 init_install()
 {
     set_keyboard_layout
-    set_font_size
     [[ $chassis == "laptop" ]] && wifi_connect
     change_root_password
     set_timezone
@@ -52,9 +51,9 @@ wifi_connect()
     ssid=
     iwctl station $net_interface scan
     iwctl station $net_interface get-networks
-    read -p "Enter SSID: " ssid
-    read -p "Enter WiFi passphrase: " -s wifipass
-    iwctl --passphrase $wifipass station $net_interface connect $ssid
+    read "ssid?Enter SSID: "
+    read -s "wifipass?Enter WiFi passphrase: "
+    iwctl station $net_interface connect $ssid --passphrase $wifipass
     wifipass=
     ssid=
     ping -c3 www.archlinux.org
@@ -72,13 +71,13 @@ continue_install()
 {
     format_disks
     mirrors_list
-    install_packages
+    install_main_packages
     generate_file_system_table
     archroot
     configure_pacman
     set_hostname
     set_locale
-    set_keyboard
+    set_console
     set_editor
     create_user
     change_root_password
@@ -88,6 +87,7 @@ continue_install()
     enable_services
     initial_ram_disk_env
     systemdboot
+    configure_zram
     ending
     #reboot_machine
 }
@@ -101,8 +101,8 @@ prepare_ssh()
 format_disks()
 {
     lsblk -f #identify disk to use
-    echo -n "Enter disk name to use (/dev/[disk_name]): "
-    read disk
+    read "disk?Enter disk name to use (not the partition): "
+    disk="/dev/$disk"
 
     #wiping all on disk
     wipefs -af $disk
@@ -110,7 +110,7 @@ format_disks()
     partprobe $disk
 
     #Overwrite existing data with zeros
-    dd if=/dev/zero of=/$disk oflag=direct bs=1M status=progress
+    dd if=/dev/zero of=$disk oflag=direct bs=1M status=progress
 
     #use 512MiB if grub for ef00
     sgdisk -n 1:0:+1GiB -t 1:ef00 -c 1:ESP -n 2:0:0 -t 2:8309 -c 2:LUKS $disk
@@ -122,13 +122,13 @@ format_disks()
 
     # formatting partitions
     #[EFI]
-    mkfs.vfat -F32 ${disk}1
+    mkfs.vfat -F 32 -n ARCH_BOOT ${disk}1
 
     #[LUKS BTRFS]
-    cryptsetup --type luks2 -v -y luksFormat ${disk}2
+    cryptsetup -v -y --type luks2 luksFormat ${disk}2 --label ARCH_CONT
     cryptsetup open ${disk}2 root
 
-    mkfs.btrfs /dev/mapper/root
+    mkfs.btrfs -L ARCH_ROOT /dev/mapper/root
     mount /dev/mapper/root /mnt
     cd /mnt
     btrfs subvolume create @
@@ -137,7 +137,7 @@ format_disks()
     btrfs subvolume create @pkg
     btrfs subvolume create @log
     cd
-    unmount /mnt
+    umount /mnt
 
     mount -o noatime,ssd,compress=zstd,space_cache=v2,discard=async,subvol=@ /dev/mapper/root /mnt
     mkdir -p /mnt/{home,boot,.snapshots,var/cache/pacman/pkg,var/log}
@@ -145,15 +145,15 @@ format_disks()
     mount -o noatime,ssd,compress=zstd,space_cache=v2,discard=async,subvol=@.snapshots /dev/mapper/root /mnt/.snapshots
     mount -o noatime,ssd,compress=zstd,space_cache=v2,discard=async,subvol=@pkg /dev/mapper/root /mnt/var/cache/pacman/pkg
     mount -o noatime,ssd,compress=zstd,space_cache=v2,discard=async,subvol=@log /dev/mapper/root /mnt/var/log
-    mount ${disk}1 /mnt/boot
+    mount -o uid=0,gid=0,fmask=0077,dmask=0077 ${disk}1 /mnt/boot
 }
 
 mirrors_list()
 {
-    reflector --save /etc/pacman.d/mirrorlist --country Belgium,Germany --protocol https --latest 5 --sort rate
+    reflector --save /etc/pacman.d/mirrorlist --country Belgium,Germany --protocol https --latest 5 --sort rate --download-timeout 60
 }
 
-install_packages()
+install_main_packages()
 {
     #todo : include microcode for amd as well based on CPU detection
     pacstrap /mnt base base-devel linux linux-headers linux-firmware btrfs-progs cryptsetup lvm2 intel-ucode git neovim
@@ -173,20 +173,21 @@ archroot()
 configure_pacman()
 {
     insert_at=$(( $( grep -n "#Color" /etc/pacman.conf | cut -d ":" -f1 ) + 1 ))
-    sed "$insert_at i ILoveCandy" /etc/pacman.conf #ILoveCandy
+    sed -i "$insert_at i ILoveCandy" /etc/pacman.conf #ILoveCandy
     sed -i '/#Color/s/^#//g' /etc/pacman.conf #Color
 
     #multilib
     insert_at=$(( $( grep -n "#\[multilib\]" /etc/pacman.conf | cut -d ":" -f1 ) + 1 ))
     sed -i '/#\[multilib\]/s/^#//g' /etc/pacman.conf #1st
-    sed "$insert_at s/^#//g" /etc/pacman.conf #2nd
+    sed -i "$insert_at s/^#//g" /etc/pacman.conf #2nd
+    pacman -Sy #to update multilib
 }
 
 set_hostname()
 {
     hostname="arch"
     echo $hostname >> /etc/hostname
-    echo "127.0.1.1\t $hostname.localdomain $hostname" >> /etc/hosts
+    echo -e "127.0.1.1\t $hostname.localdomain $hostname" >> /etc/hosts
 }
 
 set_locale()
@@ -198,9 +199,9 @@ set_locale()
     locale-gen
 }
 
-set_keyboard()
+set_console()
 {
-    echo "FONT=ter-v22n" >> /etc/vconsole.conf
+    echo "FONT=eurlatgr" >> /etc/vconsole.conf
     echo "KEYMAP=be-latin1" >> /etc/vconsole.conf
     echo "XKBLAYOUT=be" >> /etc/vconsole.conf
 }
@@ -228,14 +229,14 @@ change_root_password()
 download_scripts()
 {
     mkdir /root/scripts
-    pacman -Sy git --needed --noconfirm
+    pacman -S git --needed --noconfirm
     git clone https://github.com/blondi/scripts /root/scripts
 }
 
 collect_system_info()
 {
     echo "FAS> Collecting system info..."
-    system_info=$( source ~/scripts/system_info.sh)
+    system_info=$( source ~/scripts/system_info.sh )
     cpu=$( echo -e "$system_info" | grep CPU | cut -d "=" -f2 )
     gpu=$( echo -e "$system_info" | grep GPU | cut -d "=" -f2 )
     de=$( echo -e "$system_info" | grep DE | cut -d "=" -f2 )
@@ -243,7 +244,7 @@ collect_system_info()
 
 install_packages()
 {
-    packages="sudo networkmanager openssh iptables-nft ipset firewalld acpid polkit reflector man-db man-pages zram-generator bash-completion htop ttf-meslo-nerd terminus-font firefox gnome gnome-tweaks gnome-shell-extensions"
+    packages="sudo networkmanager openssh firewalld acpid polkit reflector man-db man-pages zram-generator bash-completion htop ttf-meslo-nerd firefox fastfetch gnome"
     [[ $gpu == "nvidia" ]] && packages+=" nvidia-dkms nvidia-utils lib32-nvidia-utils egl-wayland"
     pacman -S --needed $packages
 }
@@ -264,9 +265,9 @@ enable_services()
 initial_ram_disk_env()
 {
     #=> todo: check for hyperland only: if nvidia, add also after btrfs nvidia nvidia_modeset nvidia_uvm nvidia_drm ???
-    sed "/^MODULES=/ s/([^)]*)/(btrfs)/g" /etc/mkinitcpio.conf
-    sed "/^BINARIES=/ s/([^)]*)/(\/usr\/bin\/btrfs)/g" /etc/mkinitcpio.conf
-    sed "/^HOOKS=/ s/([^)]*)/(base udev autodetect microcode modconf kms keyboard keymap consolefont block encrypt lvm2 filesystems fsck)/g" /etc/mkinitcpio.conf
+    sed -i "/^MODULES=/ s/([^)]*)/(btrfs)/g" /etc/mkinitcpio.conf
+    sed -i "/^BINARIES=/ s/([^)]*)/(\/usr\/bin\/btrfs)/g" /etc/mkinitcpio.conf
+    sed -i "/^HOOKS=/ s/filesystems/encrypt lvm2 filesystems/g" /etc/mkinitcpio.conf
     mkinitcpio -p linux
 }
 
@@ -280,17 +281,17 @@ console-mode max
 editor yes
 EOF
 
-    diskuuid=$( blkid -s UUID -o value ${disk}2 )
     cat > /boot/loader/entries/arch.conf <<EOF
 title Arch Linux (linux)
 linux /vmlinuz-linux
 initrd /initramfs-linux.img
-options cryptdevice=PARTUUID=$diskuuid:root root=/dev/mapper/root rootflags=subvol=@ rw rootfstype=btrfs
+initrd /intel-ucode.img
+options cryptdevice=LABEL=ARCH_CONT root=LABEL=ARCH_CONT rootflags=subvol=@ rw rootfstype=btrfs
 EOF
 
     cp /boot/loader/entries/arch.conf /boot/loader/entries/arch-fallback.conf
-    sed "s/(linux)/(linux-fallback)/g" /boot/loader/entries/arch-fallback.conf
-    sed "s/linux.img/linux-fallback.img/g" /boot/loader/entries/arch-fallback.conf
+    sed -i "s/(linux)/(linux-fallback)/g" /boot/loader/entries/arch-fallback.conf
+    sed -i "s/linux.img/linux-fallback.img/g" /boot/loader/entries/arch-fallback.conf
 
     bootctl list
 
@@ -306,7 +307,17 @@ Target = systemd
 Description = Updating systemd-boot...
 When = PostTransaction
 Exec = /usr/bin/systemctl restart systemd-boot-update.service
-EOF    
+EOF
+}
+
+configure_zram()
+{
+    cat > /etc/systemd/zram-generator.conf <<EOF
+[zram0]
+zram-size = min(ram / 2, 8192)
+compression-algorithm = zstd
+EOF
+    systemctl enable systemd-zram-setup@zram0.service
 }
 
 ending()
@@ -317,36 +328,6 @@ ending()
 }
 
 #------------------------------------------------------------------------------------------------
-
-#[CHECKS AFTER INSTALL]
-systemctl --failed
-journalctl -p 3 -xb
-
-#[ZRAM]
-#create /etc/systemd/zram-generator.conf
-#[zram0]
-#zram-size = min(ram / 2, 8192)
-#compression-algorithm = zstd
-sudo systemctl daemon-reload
-sudo systemctl enable systemd-zram-setup@zram0.service
-sudo systemctl start systemd-zram-setup@zram0.service
-zramctl
-lsblk #should see zram there
-#check with zramctl
-
-#[YAY]
-sudo pacman -S --needed git base-devel
-git clone https://aur.archlinux.org/yay.git
-cd yay
-makepkg -si
-
-#[AUTO CPU FREQ]
-yay -S auto-cpufreq
-sudo systemctl enable --now auto-cpufreq.service
-
-#[TIMESHIFT]
-yay -S timeshift timeshift-autosnap
-sudo timeshift --create --comments "[message]" --tags D
 
 #[ENV for HYPRLAND config]
 #env = LIBVA_DRIVER_NAME,nvidia
@@ -359,7 +340,38 @@ sudo timeshift --create --comments "[message]" --tags D
 
 configure()
 {
-    
+    post_install_checks
+    install_yay
+    auto_cpu_freq
+    install_timeshift
+}
+
+post_install_checks()
+{
+    systemctl --failed
+    journalctl -p 3 -xb
+}
+
+install_yay()
+{
+    sudo pacman -S --needed git base-devel
+    git clone https://aur.archlinux.org/yay.git ~/yay
+    cd ~/yay
+    makepkg -si
+    cd
+    rm -rf ~/yay
+}
+
+auto_cpu_freq()
+{
+    yay -S auto-cpufreq --noconfirm
+    sudo systemctl enable --now auto-cpufreq.service
+}
+
+install_timeshift()
+{
+    yay -S timeshift timeshift-autosnap
+    sudo timeshift --create --comments "First backup" --tags D
 }
 
 clear

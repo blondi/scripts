@@ -113,7 +113,7 @@ install_extension_weather()
 install_extension_medial_control()
 {
     echo "=> Installing Media Control..."
-    install_extension_from_zip "https://github.com/sakithb/media-controls/releases/latest/download/mediacontrols@cliffniff.github.com.shell-extension.zip"
+    install_extension_from_zip "https://github.com/sakithb/media-controls/releases/latest/download/mediacontrolscliffniff.github.com.shell-extension.zip"
 }
 
 install_extension_blur_my_shell()
@@ -144,7 +144,20 @@ install_extension_gnome_shell_extensions()
     archive=$extensions.zip
 
     cd ~
-    curl -sL -o $archive "https://gitlab.gnome.org/GNOME/gnome-shell-extensions/-/archive/$gnome_version/$archive"
+
+    if curl --head --silent --fail https://gitlab.gnome.org/GNOME/gnome-shell-extensions/-/archive/$gnome_version/$archive 2> /dev/null;
+    then
+        curl -sL -o $archive "https://gitlab.gnome.org/GNOME/gnome-shell-extensions/-/archive/$gnome_version/$archive"
+    else
+        gnome_version=$( echo -e $gnome_version | cut -d "." -f1 )
+        extensions=$( echo -e $extensions | cut -d "." -f1 )
+        archive=$extenions.zip
+        if curl --head --silent --fail https://gitlab.gnome.org/GNOME/gnome-shell-extensions/-/archive/gnome-$gnome_version/$archive 2> /dev/null;
+        then
+            curl -sL -o $archive "https://gitlab.gnome.org/GNOME/gnome-shell-extensions/-/archive/gnome-$gnome_version/$archive"
+        fi
+    fi
+    
     unzip $archive
 
     cd $extensions
