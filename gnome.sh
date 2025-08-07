@@ -44,11 +44,11 @@ install_extensions()
     case $( cat /etc/os-release | grep ^ID= | cut -d "=" -f2 ) in
         *"arch"*)
             sudo pacman -Syu
-            sudo pacman -S --needed gnome-tweaks gnome-themes-extra
+            sudo pacman -S --needed gnome-tweaks gnome-themes-extra meson ts-node
             ;;
         *"fedora"*)
             sudo dnf update -y
-            sudo dnf install -y gnome-tweaks gnome-themes-extra
+            sudo dnf install -y gnome-tweaks gnome-themes-extra meson
             ;;
         *)
             echo "Unsupported distro !"
@@ -145,22 +145,22 @@ install_extension_gnome_shell_extensions()
 
     cd ~
 
-    if curl --head --silent --fail https://gitlab.gnome.org/GNOME/gnome-shell-extensions/-/archive/$gnome_version/$archive 2> /dev/null;
+    if curl --head -silent --fail https://gitlab.gnome.org/GNOME/gnome-shell-extensions/-/archive/$gnome_version/$archive > /dev/null;
     then
         curl -sL -o $archive "https://gitlab.gnome.org/GNOME/gnome-shell-extensions/-/archive/$gnome_version/$archive"
     else
         gnome_version=$( echo -e $gnome_version | cut -d "." -f1 )
-        extensions=$( echo -e $extensions | cut -d "." -f1 )
+        extensions=gnome-shell-extensions-gnome-$gnome_version
         archive=$extenions.zip
-        if curl --head --silent --fail https://gitlab.gnome.org/GNOME/gnome-shell-extensions/-/archive/gnome-$gnome_version/$archive 2> /dev/null;
+        if curl --head --silent --fail https://gitlab.gnome.org/GNOME/gnome-shell-extensions/-/archive/gnome-$gnome_version/$archive > /dev/null;
         then
             curl -sL -o $archive "https://gitlab.gnome.org/GNOME/gnome-shell-extensions/-/archive/gnome-$gnome_version/$archive"
         fi
     fi
     
-    unzip $archive
+    unzip -q $archive
 
-    cd $extensions
+    cd $extensions*
     ./export-zips.sh
     cd zip-files
 
@@ -171,7 +171,7 @@ install_extension_gnome_shell_extensions()
     done
     
     cd ~
-    rm -rf ./$extensions
+    rm -rf ./$extensions*
     rm $archive
 }
 
