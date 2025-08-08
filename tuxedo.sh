@@ -6,7 +6,7 @@ echo "Installing tuxedo repo..."
 case $( cat /etc/os-release | grep ^ID= | cut -d "=" -f2 ) in
     *"arch"*)
         yay -Syu
-        yay -S tuxedo-control-center-bin tuxedo-drivers-dkms linux-headers
+        yay -S --noconfirm tuxedo-control-center-bin tuxedo-drivers-dkms linux-headers
         ;;
     *"fedora"*)
         fedora_version=$( rpm -E %fedora )

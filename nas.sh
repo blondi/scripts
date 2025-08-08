@@ -8,9 +8,12 @@ nas_credentials_location="/etc/.nas-cred"
 
 declare -A naslocations
 
-read -p "NAS> Enter ip address: " nas_ip_address
-read -p "NAS> Enter username: " nas_username
-read -p "NAS> Enter password: " -s nas_password
+echo -n "NAS> Enter ip address: "
+read nas_ip_address
+echo -n "NAS> Enter username: "
+read nas_username
+echo -n "NAS> Enter password: "
+read -s nas_password
 echo
 echo "NAS> $nas_username will be connected to the NAS!"
 

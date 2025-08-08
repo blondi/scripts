@@ -116,7 +116,8 @@ reboot_machine()
         drmenabled=$( sudo cat /sys/module/nvidia_drm/parameters/modeset )
         if [ $drmenabled == "N" ] ; then sudo grubby --update-kernel=ALL --args="nvidia-drm.modeset=1" ; fi
     fi
-    read -p "FAS> Press a key to reboot the computer..."
+    echo -n "FAS> Press a key to reboot the computer..."
+    read
     echo
     sudo systemctl reboot
 }

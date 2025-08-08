@@ -3,8 +3,10 @@
 git_username=
 git_email=
 
-read -p "GIT> Enter full name: " git_username
-read -p "GIT> Enter email address: " git_email
+echo -n "GIT> Enter full name: "
+read git_username
+echo -n "GIT> Enter email address: "
+read git_email
 echo "GIT> $git_username ($git_email) will be set as global git user!"
 
 echo "GIT> Configuring GIT..."

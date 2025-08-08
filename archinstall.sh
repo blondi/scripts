@@ -23,7 +23,6 @@ init_install()
     set_keyboard_layout
     [[ $chassis == "laptop" ]] && wifi_connect
     change_root_password
-    set_timezone
 }
 
 set_keyboard_layout()
@@ -32,44 +31,32 @@ set_keyboard_layout()
     loadkeys be-latin1
 }
 
-set_font_size()
-{
-    #location /sys/share/kbd/consolefonts/
-    setfont ter-v24n
-}
-
 wifi_connect()
 {
     #WIFI
     #iwctl (through iwd.service)
     #[iwd] device list
     #[iwd] device [name|adatper] set-property Prowered on
-    #[iwd] station name scan
-    #[iwd] station name get-networks
-    #[iwd] station name [connect|connect-hidden] SSID
     wifipass=
     ssid=
     iwctl station $net_interface scan
     iwctl station $net_interface get-networks
-    read "ssid?Enter SSID: "
-    read -s "wifipass?Enter WiFi passphrase: "
+    echo -n "Enter SSID: " 
+    read ssid
+    echo -n "Enter WiFi passphrase: "
+    read -s wifipass
+    echo #escape for secret
     iwctl station $net_interface connect $ssid --passphrase $wifipass
     wifipass=
     ssid=
     ping -c3 www.archlinux.org
 }
 
-set_timezone()
-{
-    #timedatectl list-timezones | grep Brussel
-    timedatectl set-timezone Europe/Brussels
-    timedatectl set-ntp true
-    timedatectl status
-}
-
 continue_install()
 {
+    
     format_disks
+    set_timezone
     mirrors_list
     install_main_packages
     generate_file_system_table
@@ -101,7 +88,8 @@ prepare_ssh()
 format_disks()
 {
     lsblk -f #identify disk to use
-    read "disk?Enter disk name to use (not the partition): "
+    echo -n "Enter disk name to use (not the partition): "
+    read disk
     disk="/dev/$disk"
 
     #wiping all on disk
@@ -146,6 +134,14 @@ format_disks()
     mount -o noatime,ssd,compress=zstd,space_cache=v2,discard=async,subvol=@pkg /dev/mapper/root /mnt/var/cache/pacman/pkg
     mount -o noatime,ssd,compress=zstd,space_cache=v2,discard=async,subvol=@log /dev/mapper/root /mnt/var/log
     mount -o uid=0,gid=0,fmask=0077,dmask=0077 ${disk}1 /mnt/boot
+}
+
+set_timezone()
+{
+    #timedatectl list-timezones | grep Brussel
+    timedatectl set-timezone Europe/Brussels
+    timedatectl set-ntp true
+    timedatectl status
 }
 
 mirrors_list()
@@ -244,15 +240,14 @@ collect_system_info()
 
 install_packages()
 {
-    packages="sudo networkmanager openssh firewalld acpid polkit reflector man-db man-pages zram-generator bash-completion htop ttf-meslo-nerd firefox fastfetch gnome"
+    packages="man-db man-pages efibootmgr networkmanager zram-generator acpid polkit reflector sudo openssh htop fastfetch bash-completion ttf-meslo-nerd firefox gnome"
     [[ $gpu == "nvidia" ]] && packages+=" nvidia-dkms nvidia-utils lib32-nvidia-utils egl-wayland"
-    pacman -S --needed $packages
+    pacman -S --needed $packages --noconfirm
 }
 
 enable_services()
 {
     systemctl enable NetworkManager #network
-    systemctl enable firewalld
     systemctl enable reflector.timer
     systemctl enable fstrim.timer #optimization ssd
     systemctl enable acpid
@@ -308,6 +303,12 @@ Description = Updating systemd-boot...
 When = PostTransaction
 Exec = /usr/bin/systemctl restart systemd-boot-update.service
 EOF
+
+    #rename EFI entry
+    #currentboot=$( efibootmgr | grep Current | cut -d " " -f2 )
+    #bootpath=$( blkid | grep ARCH_BOOT | cut -d ":" -f1 )
+    #efibootmgr -b $currentboot -B #delete current entry
+    #efibootmgr -c -d $([[ $bootpath =~ "nvme" ]] && echo ${bootpath::-2} || echo ${bootpath::-1}) -p ${bootpath:$(( ${#bootpath} - 1 ))} -L Archlinux \EFI\BOOT\BOOTX64.EFI --index 0
 }
 
 configure_zram()
@@ -370,7 +371,7 @@ auto_cpu_freq()
 
 install_timeshift()
 {
-    yay -S timeshift timeshift-autosnap
+    yay -S timeshift timeshift-autosnap --noconfirm
     sudo timeshift --create --comments "First backup" --tags D
 }
 
