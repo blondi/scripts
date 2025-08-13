@@ -44,7 +44,7 @@ install_extensions()
     case $( cat /etc/os-release | grep ^ID= | cut -d "=" -f2 ) in
         *"arch"*)
             sudo pacman -Syu
-            sudo pacman -S --needed gnome-tweaks gnome-themes-extra meson ts-node
+            sudo pacman -S --needed --noconfirm gnome-tweaks gnome-themes-extra meson ts-node gettext just glib2-devel
             ;;
         *"fedora"*)
             sudo dnf update -y
@@ -61,6 +61,7 @@ install_extensions()
     install_extension_weather
     install_extension_medial_control
     install_extension_blur_my_shell
+    install_extension_app_indicators
     install_extension_gsconnect
     install_extension_gnome_shell_extensions
     install_extension_pop_shell
@@ -120,6 +121,12 @@ install_extension_blur_my_shell()
 {
     echo "=> Installing Blur My Shell..."
     install_extension_from_zip "https://github.com/aunetx/blur-my-shell/releases/latest/download/blur-my-shell@aunetx.shell-extension.zip"
+}
+
+install_extension_app_indicators()
+{
+    echo "=> Installing App Indicators..."
+    install_extension_from_zip "https://github.com/ubuntu/gnome-shell-extension-appindicator/releases/latest/download/appindicatorsupport@rgcjonas.gmail.com.zip"
 }
 
 install_extension_gsconnect()

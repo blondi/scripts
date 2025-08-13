@@ -52,6 +52,14 @@ wifi_connect()
     ping -c3 www.archlinux.org
 }
 
+prepare_ssh()
+{
+    ipaddress=$( ip a l $net_interface | awk '/inet / {print $2}' | cut -d '/' -f1 )
+    echo -e "Connect with ssh using : ssh root@$ipaddress"
+}
+
+#------------------------------------------------------------------------------------
+
 continue_install()
 {
     
@@ -75,14 +83,13 @@ continue_install()
     initial_ram_disk_env
     systemdboot
     configure_zram
-    ending
-    #reboot_machine
-}
-
-prepare_ssh()
-{
-    ipaddress=$( ip a l $net_interface | awk '/inet / {print $2}' | cut -d '/' -f1 )
-    echo -e "Connect with ssh using : ssh root@$ipaddress"
+    switch_to_user
+    install_yay
+    auto_cpu_freq
+    install_snapper
+    install_rider
+    custom_scripts
+    #ending
 }
 
 format_disks()
@@ -152,7 +159,7 @@ mirrors_list()
 install_main_packages()
 {
     #todo : include microcode for amd as well based on CPU detection
-    pacstrap /mnt base base-devel linux linux-headers linux-firmware btrfs-progs cryptsetup lvm2 intel-ucode git neovim
+    pacstrap /mnt base base-devel linux linux-headers linux-firmware btrfs-progs cryptsetup lvm2 intel-ucode git vim
 }
 
 generate_file_system_table()
@@ -204,8 +211,8 @@ set_console()
 
 set_editor()
 {
-    echo "EDITOR=nvim" >> /etc/environment
-    echo "VISUAL=nvim" >> /etc/environment
+    echo "EDITOR=vim" >> /etc/environment
+    echo "VISUAL=vim" >> /etc/environment
 }
 
 create_user()
@@ -224,15 +231,15 @@ change_root_password()
 
 download_scripts()
 {
-    mkdir /root/scripts
+    mkdir /home/blondi/scripts
     pacman -S git --needed --noconfirm
-    git clone https://github.com/blondi/scripts /root/scripts
+    git clone https://github.com/blondi/scripts /home/blondi/scripts
 }
 
 collect_system_info()
 {
     echo "FAS> Collecting system info..."
-    system_info=$( source ~/scripts/system_info.sh )
+    system_info=$( source /home/blondi/scripts/system_info.sh )
     cpu=$( echo -e "$system_info" | grep CPU | cut -d "=" -f2 )
     gpu=$( echo -e "$system_info" | grep GPU | cut -d "=" -f2 )
     de=$( echo -e "$system_info" | grep DE | cut -d "=" -f2 )
@@ -240,7 +247,7 @@ collect_system_info()
 
 install_packages()
 {
-    packages="man-db man-pages efibootmgr networkmanager zram-generator acpid polkit reflector sudo openssh htop fastfetch bash-completion ttf-meslo-nerd firefox gnome"
+    packages="man-db man-pages efibootmgr networkmanager zram-generator acpid polkit reflector sudo openssh htop fastfetch bash-completion ttf-meslo-nerd firefox gnome github-cli code keepassxc evolution solaar lm_sensors steam"
     [[ $gpu == "nvidia" ]] && packages+=" nvidia-dkms nvidia-utils lib32-nvidia-utils egl-wayland"
     pacman -S --needed $packages --noconfirm
 }
@@ -252,7 +259,7 @@ enable_services()
     systemctl enable fstrim.timer #optimization ssd
     systemctl enable acpid
     systemctl enable gdm #gnome_desktop_manager
-    #systemctl enable bluetooth
+    [[ ! -z $( ls /sys/class | grep bluetooth ) ]] && systemctl enable bluetooth
     #systemctl enable sshd
     #=> for wireless, use nmtui
 }
@@ -271,7 +278,7 @@ systemdboot()
     bootctl --esp-path=/boot install
     cat > /boot/loader/loader.conf <<EOF
 default arch.conf
-timeout 3
+timeout 5
 console-mode max
 editor yes
 EOF
@@ -281,7 +288,7 @@ title Arch Linux (linux)
 linux /vmlinuz-linux
 initrd /initramfs-linux.img
 initrd /intel-ucode.img
-options cryptdevice=LABEL=ARCH_CONT root=LABEL=ARCH_CONT rootflags=subvol=@ rw rootfstype=btrfs
+options cryptdevice=LABEL=ARCH_CONT:root root=/dev/mapper/root rootflags=subvol=@ rw rootfstype=btrfs
 EOF
 
     cp /boot/loader/entries/arch.conf /boot/loader/entries/arch-fallback.conf
@@ -305,10 +312,10 @@ Exec = /usr/bin/systemctl restart systemd-boot-update.service
 EOF
 
     #rename EFI entry
-    #currentboot=$( efibootmgr | grep Current | cut -d " " -f2 )
-    #bootpath=$( blkid | grep ARCH_BOOT | cut -d ":" -f1 )
-    #efibootmgr -b $currentboot -B #delete current entry
-    #efibootmgr -c -d $([[ $bootpath =~ "nvme" ]] && echo ${bootpath::-2} || echo ${bootpath::-1}) -p ${bootpath:$(( ${#bootpath} - 1 ))} -L Archlinux \EFI\BOOT\BOOTX64.EFI --index 0
+    archboot=$( efibootmgr | grep Archlinux | cut -d " " -f1 | grep -o -E "[0-9]+" )
+    bootpath=$( blkid | grep ARCH_BOOT | cut -d ":" -f1 )
+    efibootmgr -b $archboot -B #delete current entry
+    efibootmgr -c -d $([[ $bootpath =~ "nvme" ]] && echo ${bootpath::-2} || echo ${bootpath::-1}) -p ${bootpath:$(( ${#bootpath} - 1 ))} -L "Archlinux" -l "\EFI\BOOT\BOOTX64.EFI" --index 0
 }
 
 configure_zram()
@@ -321,36 +328,9 @@ EOF
     systemctl enable systemd-zram-setup@zram0.service
 }
 
-ending()
+switch_to_user()
 {
-    exit
-    umount -R /mnt
-    reboot
-}
-
-#------------------------------------------------------------------------------------------------
-
-#[ENV for HYPRLAND config]
-#env = LIBVA_DRIVER_NAME,nvidia
-#env = __GLX_VENDOR_LIBRARY_NAME,nvidia
-
-
-#################
-# CONFIGURATION #
-#################
-
-configure()
-{
-    post_install_checks
-    install_yay
-    auto_cpu_freq
-    install_timeshift
-}
-
-post_install_checks()
-{
-    systemctl --failed
-    journalctl -p 3 -xb
+    su blondi
 }
 
 install_yay()
@@ -366,13 +346,58 @@ install_yay()
 auto_cpu_freq()
 {
     yay -S auto-cpufreq --noconfirm
-    sudo systemctl enable --now auto-cpufreq.service
+    sudo systemctl enable auto-cpufreq.service
 }
 
-install_timeshift()
+install_snapper()
 {
-    yay -S timeshift timeshift-autosnap --noconfirm
-    sudo timeshift --create --comments "First backup" --tags D
+    yay -S snapper btrfs-assistant --noconfirm
+}
+
+install_rider()
+{
+    yay -S rider --noconfirm
+}
+
+custom_scripts()
+{
+    source ~/scripts/git.sh
+    source ~/scripts/monitors.sh
+    source ~/scripts/nas.sh
+    [[ $( hostnamectl | grep Chassis ) =~ "desktop" ]] && source ~/scripts/mount_game_drive.sh
+}
+
+ending()
+{
+    exit
+    umount -R /mnt
+    reboot
+}
+
+#------------------------------------------------------------------------------------------------
+
+#################
+# CONFIGURATION #
+#################
+
+configure()
+{
+    post_install_checks
+
+    #TODO
+    #check DE is gnome => execute gnome script install part
+}
+
+post_install_checks()
+{
+    systemctl --failed
+    journalctl -p 3 -xb
+}
+
+configure_snapper()
+{
+    sudo snapper -c root create-config /
+    sudo snapper -c root create --description "first snapshot"
 }
 
 clear

@@ -38,7 +38,4 @@ do
 done
 
 echo -e "$fstab" | sudo dd of=/etc/fstab oflag=append conv=notrunc status=none
-
-sudo systemctl daemon-reload
-sudo mount -a
 echo
