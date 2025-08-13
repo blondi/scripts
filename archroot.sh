@@ -70,8 +70,7 @@ change_root_password()
 
 copy_scripts()
 {
-    mkdir /home/blondi/scripts
-    cp -r /root/scripts /home/blondi/scripts
+    cp -r /root/scripts /home/blondi/
 }
 
 collect_system_info()
@@ -134,7 +133,7 @@ EOF
     sed -i "s/linux.img/linux-fallback.img/g" /boot/loader/entries/arch-fallback.conf
 
     bootctl list
-
+    mkdir /home/blondi/scripts
     #update hook
     sudo mkdir /etc/pacman.d/hooks
     cat > /etc/pacman.d/hooks/95-systemd-boot.hook <<EOF
@@ -168,41 +167,7 @@ EOF
 
 switch_to_user()
 {
-    su blondi
-}
-
-install_yay()
-{
-    sudo pacman -S --needed git base-devel
-    git clone https://aur.archlinux.org/yay.git ~/yay
-    cd ~/yay
-    makepkg -si
-    cd
-    rm -rf ~/yay
-}
-
-auto_cpu_freq()
-{
-    yay -S auto-cpufreq --noconfirm
-    sudo systemctl enable auto-cpufreq.service
-}
-
-install_snapper()
-{
-    yay -S snapper btrfs-assistant --noconfirm
-}
-
-install_rider()
-{
-    yay -S rider --noconfirm
-}
-
-custom_scripts()
-{
-    source ~/scripts/git.sh
-    source ~/scripts/monitors.sh
-    source ~/scripts/nas.sh
-    [[ $( hostnamectl | grep Chassis ) =~ "desktop" ]] && source ~/scripts/mount_game_drive.sh
+    /bin/su -c "/home/blondi/archuser.sh" - blondi
 }
 
 configure_pacman
@@ -220,8 +185,3 @@ initial_ram_disk_env
 systemdboot
 configure_zram
 switch_to_user
-install_yay
-auto_cpu_freq
-install_snapper
-install_rider
-custom_scripts
