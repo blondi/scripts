@@ -1,41 +1,37 @@
 #!/usr/bin/env bash
 
-install_yay()
-{
-    sudo pacman -S --needed git base-devel
-    git clone https://aur.archlinux.org/yay.git ~/yay
-    cd ~/yay
-    makepkg -si
-    cd
-    rm -rf ~/yay
-}
+bold=$( tput bold )
+reg=$( tput sgr0 )
 
-auto_cpu_freq()
-{
-    yay -S auto-cpufreq --noconfirm
-    sudo systemctl enable auto-cpufreq.service
-}
+#YAY
+echo ${bold}INSTALLING YAY...
+sudo pacman -S --needed git base-devel
+git clone https://aur.archlinux.org/yay.git ~/yay
+cd ~/yay
+makepkg -si
+cd
+rm -rf ~/yay
 
-install_snapper()
-{
-    yay -S snapper btrfs-assistant --noconfirm
-}
+#AUTO CPU FREQ
+echo ${bold}INSTALLING AUTO CPUFREQ...
+yay -S auto-cpufreq --noconfirm
+sudo systemctl enable auto-cpufreq.service
 
-install_rider()
-{
-    yay -S rider --noconfirm
-}
+#SNAPPER
+echo ${bold}INSTALLING SNAPPER...
+yay -S snapper btrfs-assistant --noconfirm
 
-custom_scripts()
-{
-    source ~/scripts/git.sh
-    source ~/scripts/monitors.sh
-    source ~/scripts/nas.sh
-    [[ $( hostnamectl | grep Chassis ) =~ "desktop" ]] && source ~/scripts/mount_game_drive.sh
-}
+sudo snapper -c root create-config /
+sudo snapper -c root create --description "first snapshot"
 
-install_yay
-auto_cpu_freq
-install_snapper
-install_rider
-custom_scripts
+#RIDER
+echo ${bold}INSTALLING RIDER...
+yay -S rider --noconfirm
+
+#CUSTOM SCRIPTS
+echo ${bold}LAUNCHING CUSTOM SCRIPTS...
+source ~/scripts/monitors.sh
+[[ $( hostnamectl | grep Chassis ) =~ "desktop" ]] && source ~/scripts/mount_game_drive.sh
+source ~/scripts/gnome.sh -i
+source ~/scripts/git.sh
+source ~/scripts/nas.sh

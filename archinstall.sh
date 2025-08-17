@@ -7,6 +7,8 @@
 # computer type
 chassis=$( hostnamectl chassis )
 net_interface=$( ls /sys/class/net | grep -v "lo" )
+bold=$( tput bold )
+reg=$( tput sgr0 )
 
 # system detecion
 system_info=
@@ -20,80 +22,67 @@ de=
 
 init_install()
 {
-    set_keyboard_layout
-    [[ $chassis == "laptop" ]] && wifi_connect
-    change_root_password
-    download_scripts
-}
-
-set_keyboard_layout()
-{
+    #KEYBOARD
     #localectl list-keymaps | grep be
+    echo ${bold}SETTING UP KEYBOARS...
     loadkeys be-latin1
-}
 
-wifi_connect()
-{
-    #WIFI
-    #iwctl (through iwd.service)
-    #[iwd] device list
-    #[iwd] device [name|adatper] set-property Prowered on
-    wifipass=
-    ssid=
-    iwctl station $net_interface scan
-    iwctl station $net_interface get-networks
-    echo -n "Enter SSID: " 
-    read ssid
-    echo -n "Enter WiFi passphrase: "
-    read -s wifipass
-    echo #escape for secret
-    iwctl station $net_interface connect $ssid --passphrase $wifipass
-    wifipass=
-    ssid=
-    ping -c3 www.archlinux.org
-}
+    if [[ $chassis == "laptop" ]]
+    then
+        #WIFI
+        echo ${bold}SETTING UP WIFI...
+        #iwctl (through iwd.service)
+        #[iwd] device list
+        #[iwd] device [name|adatper] set-property Prowered on
+        wifipass=
+        ssid=
+        iwctl station $net_interface scan
+        iwctl station $net_interface get-networks
+        echo -n "Enter SSID: " 
+        read ssid
+        echo -n "Enter WiFi passphrase: "
+        read -s wifipass
+        echo #escape for secret
+        iwctl station $net_interface connect $ssid --passphrase $wifipass
+        wifipass=
+        ssid=
+        ping -c3 www.archlinux.org
+    fi
 
-download_scripts()
-{
+    #PASSWORD ROOT
+    echo ${bold}CHANGING ROOT PASSWORD...
+    passwd root
+
+    #GET SCRIPTS
+    echo ${bold}GETTING SCRIPTS...
     pacman -Sy git --needed --noconfirm
     git clone https://github.com/blondi/scripts /root/scripts
-}
 
-prepare_ssh()
-{
+    #SSH
+    echo ${bold}SSH CONFIG...
     ipaddress=$( ip a l $net_interface | awk '/inet / {print $2}' | cut -d '/' -f1 )
     echo -e "Connect with ssh using : ssh root@$ipaddress"
 }
 
 #------------------------------------------------------------------------------------
 
-continue_install()
+install()
 {
-    
-    format_disks
-    set_timezone
-    mirrors_list
-    install_main_packages
-    generate_file_system_table
-    archroot_part
-    #ending
-}
-
-format_disks()
-{
+    echo ${bold}DRIVE CONFIGURATION...
     lsblk -f #identify disk to use
     echo -n "Enter disk name to use (not the partition): "
     read disk
     disk="/dev/$disk"
 
+    echo ${bold}WIPING DRIVE $disk...
     #wiping all on disk
     wipefs -af $disk
     sgdisk --zap-all --clear $disk
     partprobe $disk
-
     #Overwrite existing data with zeros
     dd if=/dev/zero of=$disk oflag=direct bs=1M status=progress
 
+    echo ${bold}PARTITIONING DRIVE...
     #use 512MiB if grub for ef00
     sgdisk -n 1:0:+1GiB -t 1:ef00 -c 1:ESP -n 2:0:0 -t 2:8309 -c 2:LUKS $disk
     partprobe $disk
@@ -104,13 +93,17 @@ format_disks()
 
     # formatting partitions
     #[EFI]
-    mkfs.vfat -F 32 -n ARCH_BOOT ${disk}1
+    mkfs.vfat -F 32 -n Archboot ${disk}1
 
     #[LUKS BTRFS]
-    cryptsetup -v -y --type luks2 luksFormat ${disk}2 --label ARCH_CONT
+    echo ${bold}SETTING UP ENCRYPTION...
+    cryptsetup -v -y --type luks2 luksFormat ${disk}2 --label Archlinux
+    echo ${bold}OPENING ENCRYPTED DRIVE...
     cryptsetup open ${disk}2 root
 
-    mkfs.btrfs -L ARCH_ROOT /dev/mapper/root
+    mkfs.btrfs -L Archroot /dev/mapper/root
+
+    #[BTRFS SUB VOLUMES]
     mount /dev/mapper/root /mnt
     cd /mnt
     btrfs subvolume create @
@@ -128,74 +121,50 @@ format_disks()
     mount -o noatime,ssd,compress=zstd,space_cache=v2,discard=async,subvol=@pkg /dev/mapper/root /mnt/var/cache/pacman/pkg
     mount -o noatime,ssd,compress=zstd,space_cache=v2,discard=async,subvol=@log /dev/mapper/root /mnt/var/log
     mount -o uid=0,gid=0,fmask=0077,dmask=0077 ${disk}1 /mnt/boot
-}
 
-set_timezone()
-{
+    #TIMEZONE
     #timedatectl list-timezones | grep Brussel
+    echo ${bold}SETTING UP TIMEZONE...
     timedatectl set-timezone Europe/Brussels
     timedatectl set-ntp true
     timedatectl status
-}
 
-mirrors_list()
-{
+    #MIRRORS
+    echo ${bold}SETTING UP PACMAN MIRRORS...
     reflector --save /etc/pacman.d/mirrorlist --country Belgium,Germany --protocol https --latest 5 --sort rate --download-timeout 60
-}
 
-install_main_packages()
-{
+    #PACKAGES
     #todo : include microcode for amd as well based on CPU detection
+    echo ${bold}INSTALLING BASE PACKAGES...
     pacstrap /mnt base base-devel linux linux-headers linux-firmware btrfs-progs cryptsetup lvm2 intel-ucode git vim
-}
 
-generate_file_system_table()
-{
+    #FILE SYSTEM TABLE
+    echo ${bold}GENERATING FILE SYSTEM TABLE...
     genfstab -U -p /mnt >> /mnt/etc/fstab
-}
 
-archroot_part()
-{
     #step into the system
     cp -r /root/scripts /mnt/root/scripts
     rm -rf /root/scripts
+    echo ${bold}ARCH-CHROOTING...
     arch-chroot /mnt /bin/bash "./root/scripts/archroot.sh"
-    rm -rf 
-}
 
-
-ending()
-{
-    exit
+    echo ${bold}ENDING SCRIPT...
     umount -R /mnt
-    reboot
+    #reboot
 }
 
-#------------------------------------------------------------------------------------------------
-
-#################
-# CONFIGURATION #
-#################
-
-configure()
+post_install()
 {
-    post_install_checks
-
-    #TODO
-    #check DE is gnome => execute gnome script install part
-}
-
-post_install_checks()
-{
+    #CHECKS
     systemctl --failed
     journalctl -p 3 -xb
+    read
+
+    #GNOME
+    source ~/scripts/gnome.sh -c
 }
 
-configure_snapper()
-{
-    sudo snapper -c root create-config /
-    sudo snapper -c root create --description "first snapshot"
-}
+#------------------------------------------------------------------------
 
 clear
 echo "###############################"
@@ -213,17 +182,16 @@ then
         if [[ $2 == '-ssh' ]]
         then
             init_install
-            prepare_ssh
             exit 1
         elif [[ $2 == '-r' ]]
         then
-            continue_install
+            install
             exit 1
         fi
     fi
     init_install
-    continue_install
+    install
 elif [[ $1 == "-c" ]]
 then
-    configure
+    post_install
 fi
