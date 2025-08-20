@@ -158,4 +158,5 @@ systemctl enable systemd-zram-setup@zram0.service
 
 #SWITCH USER
 echo ${bold}SWITCHING TO USER...${reg}
-/bin/su -c "/home/blondi/archuser.sh" - blondi
+chown -R blondi:wheel /home/blondi/scripts/
+sudo -S -u blondi -i /bin/bash -c 'source /home/blondi/scripts/archuser.sh'

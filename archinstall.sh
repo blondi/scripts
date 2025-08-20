@@ -144,11 +144,12 @@ install()
 
     #step into the system
     cp -r /root/scripts /mnt/root/scripts
-    rm -rf /root/scripts
     echo ${bold}ARCH-CHROOTING...${reg}
     arch-chroot /mnt /bin/bash "./root/scripts/archroot.sh"
 
     echo ${bold}ENDING SCRIPT...${reg}
+    rm -rf /root/scripts
+    rm -rf /mnt/root/scripts
     umount -R /mnt
     #reboot
 }
@@ -160,7 +161,7 @@ post_install()
     journalctl -p 3 -xb
     read
 
-    #GNOME
+    #GNOME install
     source ~/scripts/gnome.sh -c
 }
 

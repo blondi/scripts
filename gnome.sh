@@ -79,9 +79,9 @@ install_extension_from_git_with_make()
     cd $folder_name
     if [ -z $2 ]
     then
-        make
+        make -k
     else
-        make $2
+        make -k $2
     fi
     cd ~
     rm -rf ./$folder_name
