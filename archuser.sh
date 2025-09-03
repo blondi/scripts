@@ -29,4 +29,3 @@ source ~/scripts/monitors.sh
 [[ $( hostnamectl | grep Chassis ) =~ "desktop" ]] && source ~/scripts/mount_game_drive.sh
 source ~/scripts/git.sh
 source ~/scripts/nas.sh
-source ~/scripts/gnome.sh -i

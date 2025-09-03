@@ -151,7 +151,17 @@ install()
     rm -rf /root/scripts
     rm -rf /mnt/root/scripts
     umount -R /mnt
-    #reboot
+    echo Your computer will now reboot...
+    read
+}
+
+resume_install()
+{
+    echo ${bold}INSTALLING GNOME EXTENSIONS...${reg}
+    #pop os shell extension needs DE to be loadedto set the shortcuts... => moving to forge ?
+    source ~/scripts/gnome.sh -i
+    echo Your computer will now reboot...
+    read
 }
 
 post_install()
@@ -162,6 +172,7 @@ post_install()
     read
 
     #GNOME install
+    echo ${bold}CONFIGURING GNOME ECOSYSTEM...${reg}
     source ~/scripts/gnome.sh -c
 }
 
@@ -171,27 +182,23 @@ clear
 echo "###############################"
 echo "# ARCHLINUX automation script #"
 echo "###############################"
-if ! [[ "$1" =~ ^(-i|-c)$ ]]
+if ! [[ "$1" =~ ^(-i|-r|-c)$ ]]
 then
     echo "Mode not detected!"
-    echo "Use "-i" to install, "-c" to configure after the install part."
+    echo "Use "-i" to install, "-r" for gnome specific install and "-c" to configure after the install parts."
     exit 2
 elif [[ $1 == "-i" ]]
 then
-    if [ ! -z $2 ]
+    if [ ! -z $2 ] && [[ $2 == '-ssh' ]]
     then
-        if [[ $2 == '-ssh' ]]
-        then
-            init_install
-            exit 1
-        elif [[ $2 == '-r' ]]
-        then
-            install
-            exit 1
-        fi
+        if [[ -d  /root/scripts ]] && install || init_install
+        exit 1
     fi
     init_install
     install
+elif [[ $1 == "-r" ]]
+then
+    resume_install
 elif [[ $1 == "-c" ]]
 then
     post_install
