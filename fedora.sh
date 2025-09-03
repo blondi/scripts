@@ -43,8 +43,6 @@ configure()
     update_mulimedia_codec
     optimizations
     [[ $chassis == "laptop" ]] && source ~/scripts/tuxedo.sh
-    get_wallpaper
-    get_icons
     get_font
     [[ $de == "gnome" ]] && source ~/scripts/gnome.sh -c
     reboot_machine
@@ -161,23 +159,6 @@ optimizations()
     echo "FAS> Launching miscellaneous optimizations..."
     sudo rm -f /usr/lib64/firefox/browser/defaults/preferences/firefox-redhat-default-prefs.js
     sudo hostnamectl set-hostname "fedora"
-}
-
-get_wallpaper()
-{
-    echo "FAS> Downloading wallpaper..."
-    sudo curl -sL -o /usr/share/backgrounds/astronaut.png https://raw.githubusercontent.com/orangci/walls/main/astronaut.png
-}
-
-get_icons()
-{
-    echo "FAS> Installing icons pack..."
-    cd ~
-    git clone https://github.com/vinceliuice/Tela-icon-theme.git
-    cd ./Tela-icon-theme
-    ./install.sh grey
-    cd ..
-    rm -rf ./Tela-icon-theme
 }
 
 get_font()

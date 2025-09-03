@@ -182,6 +182,23 @@ install_extension_gnome_shell_extensions()
     rm $archive
 }
 
+get_wallpaper()
+{
+    echo "GNOME> Downloading wallpaper..."
+    sudo curl -sL -o /usr/share/backgrounds/astronaut.png https://raw.githubusercontent.com/orangci/walls/main/astronaut.png
+}
+
+get_icons()
+{
+    echo "GNOME> Installing icons pack..."
+    cd ~
+    git clone https://github.com/vinceliuice/Tela-icon-theme.git
+    cd ./Tela-icon-theme
+    ./install.sh grey
+    cd ..
+    rm -rf ./Tela-icon-theme
+}
+
 apply_settings()
 {
     echo "GNOME> Applying settings..."
@@ -297,6 +314,8 @@ configure_gnome()
 {
     update_gdm_resolution
     add_nas_bookmarks
+    get_wallpaper
+    get_icons
     apply_settings
     enable_gnome_extensions
 }
