@@ -25,7 +25,13 @@ sudo snapper -c root create --description "first snapshot"
 
 #CUSTOM SCRIPTS
 echo ${bold}LAUNCHING CUSTOM SCRIPTS...${reg}
+echo ${bold}SETTING MONITOR RESOLUTION...${reg}
 source ~/scripts/monitors.sh
+echo ${bold}ADDING GAME DRIVE...${reg}
 [[ $( hostnamectl | grep Chassis ) =~ "desktop" ]] && source ~/scripts/mount_game_drive.sh
+echo ${bold}CONFIGURING GIT...${reg}
 source ~/scripts/git.sh
+echo ${bold}CONFIGURING NAS...${reg}
 source ~/scripts/nas.sh
+echo ${bold}INSTALLING GNOME EXTENSIONS...${reg}
+source ~/scripts/gnome.sh -i

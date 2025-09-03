@@ -155,15 +155,6 @@ install()
     read
 }
 
-resume_install()
-{
-    echo ${bold}INSTALLING GNOME EXTENSIONS...${reg}
-    #pop os shell extension needs DE to be loadedto set the shortcuts... => moving to forge ?
-    source ~/scripts/gnome.sh -i
-    echo Your computer will now reboot...
-    read
-}
-
 post_install()
 {
     #CHECKS
@@ -196,9 +187,6 @@ then
     fi
     init_install
     install
-elif [[ $1 == "-r" ]]
-then
-    resume_install
 elif [[ $1 == "-c" ]]
 then
     post_install

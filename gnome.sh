@@ -182,12 +182,6 @@ install_extension_gnome_shell_extensions()
     rm $archive
 }
 
-install_extension_pop_shell()
-{
-    echo "=> Installing POP Shell..."
-    install_extension_from_git_with_make https://github.com/pop-os/shell.git local-install
-}
-
 apply_settings()
 {
     echo "GNOME> Applying settings..."
@@ -242,14 +236,6 @@ apply_settings()
     dconf write /org/gnome/shell/extensions/mediacontrols/labels-order "['ARTIST', '-', 'TITLE']"
     dconf write /org/gnome/shell/extensions/mediacontrols/label-width "uint32 250"
     dconf write /org/gnome/shell/extensions/mediacontrols/elements-order "['ICON', 'CONTROLS', 'LABEL']"
-
-    # pop shell
-    dconf write /org/gnome/shell/extensions/pop-shell/active-hint false
-    dconf write /org/gnome/shell/extensions/pop-shell/active-hint-border-radius "uint32 16"
-    dconf write /org/gnome/shell/extensions/pop-shell/tile-by-default false
-    dconf write /org/gnome/shell/extensions/pop-shell/gap-outer "uint32 2"
-    dconf write /org/gnome/shell/extensions/pop-shell/gap-inner "uint32 1"
-    dconf write /org/gnome/shell/extensions/pop-shell/hint-color-rgba "'rgb(255,255,255)'"
     
     # blur-my-shell
     dconf write /org/gnome/shell/extensions/blur-my-shell/panel/blur true
@@ -288,7 +274,6 @@ enable_gnome_extensions()
         "auto-move-windows@gnome-shell-extensions.gcampax.github.com"
         "native-window-placement@gnome-shell-extensions.gcampax.github.com"
         "system-monitor@gnome-shell-extensions.gcampax.github.com"
-        "pop-shell@system76.com"
         "appindicatorsupport@rgcjonas.gmail.com"
         "gsconnect@andyholmes.github.io"
         "blur-my-shell@aunetx"
