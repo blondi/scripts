@@ -180,9 +180,9 @@ then
     exit 2
 elif [[ $1 == "-i" ]]
 then
-    if [ ! -z $2 ] && [[ $2 == '-ssh' ]]
+    if [[ ! -z $2 && $2 == '-ssh' ]]
     then
-        if [[ -d  /root/scripts ]] && install || init_install
+        [[ -d  /root/scripts ]] && install || init_install
         exit 1
     fi
     init_install

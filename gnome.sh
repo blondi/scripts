@@ -64,7 +64,6 @@ install_extensions()
     install_extension_app_indicators
     install_extension_gsconnect
     install_extension_gnome_shell_extensions
-    install_extension_pop_shell
 }
 
 install_extension_from_git_with_make()
@@ -142,7 +141,6 @@ install_extension_gnome_shell_extensions()
     gnome_shell_extensions=(
         "auto-move-windows@gnome-shell-extensions.gcampax.github.com.shell-extension.zip"
         "drive-menu@gnome-shell-extensions.gcampax.github.com.shell-extension.zip"
-        "system-monitor@gnome-shell-extensions.gcampax.github.com.shell-extension.zip"
         "native-window-placement@gnome-shell-extensions.gcampax.github.com.shell-extension.zip"
     )
 
@@ -185,7 +183,7 @@ install_extension_gnome_shell_extensions()
 get_wallpaper()
 {
     echo "GNOME> Downloading wallpaper..."
-    sudo curl -sL -o /usr/share/backgrounds/astronaut.png https://raw.githubusercontent.com/orangci/walls/main/astronaut.png
+    sudo curl -sL -o /usr/share/backgrounds/retro-futuristic-7.jpg https://cdn.prod.website-files.com/631e594043d13c32e2c927d9/6603aac1bb303f899b6a5e45_retro-futuristic-7.jpg
 }
 
 get_icons()
@@ -194,7 +192,7 @@ get_icons()
     cd ~
     git clone https://github.com/vinceliuice/Tela-icon-theme.git
     cd ./Tela-icon-theme
-    ./install.sh grey
+    ./install.sh ubuntu
     cd ..
     rm -rf ./Tela-icon-theme
 }
@@ -206,10 +204,10 @@ apply_settings()
     weatherlocation="[<(uint32 2, <('Ottignies', '', false, [(0.88429474975634159, 0.079744969689317949)], @a(dd) [])>)>]"
     
     # base
-    if [ -f /usr/share/backgrounds/astronaut.png ]
+    if [ -f /usr/share/backgrounds/retro-futuristic-7.jpg ]
     then
-        dconf write /org/gnome/desktop/background/picture-uri "'file:///usr/share/backgrounds/astronaut.png'"
-        dconf write /org/gnome/desktop/background/picture-uri-dark "'file:///usr/share/backgrounds/astronaut.png'"
+        dconf write /org/gnome/desktop/background/picture-uri "'file:///usr/share/backgrounds/retro-futuristic-7.jpg'"
+        dconf write /org/gnome/desktop/background/picture-uri-dark "'file:///usr/share/backgrounds/retro-futuristic-7.jpg'"
     fi
     dconf write /org/gnome/desktop/input-sources/sources "[('xkb', 'be')]"
     dconf write /org/gnome/desktop/interface/accent-color "'orange'"
@@ -217,7 +215,7 @@ apply_settings()
     dconf write /org/gnome/desktop/interface/clock-show-weekday true
     dconf write /org/gnome/desktop/interface/color-scheme "'prefer-dark'"
     dconf write /org/gnome/desktop/interface/gtk-theme "'Adwaita-dark'"
-    dconf write /org/gnome/desktop/interface/icon-theme "'Tela-grey'"
+    dconf write /org/gnome/desktop/interface/icon-theme "'Tela-ubuntu'"
     dconf write /org/gnome/desktop/interface/show-battery-percentage true
     dconf write /org/gnome/desktop/peripherals/mouse/accel-profile "'flat'"
     dconf write /org/gnome/desktop/peripherals/mouse/speed 0.0
@@ -241,9 +239,6 @@ apply_settings()
 
     # weather
     dconf write /org/gnome/shell/extensions/weatherornot/position "'clock-right-centered'"
-
-    # system info
-    dconf write /org/gnome/shell/extensions/system-monitor/show-swap false
 
     # media control
     dconf write /org/gnome/shell/extensions/mediacontrols/show-control-icons-seek-backward false
@@ -290,7 +285,6 @@ enable_gnome_extensions()
         "drive-menu@gnome-shell-extensions.gcampax.github.com"
         "auto-move-windows@gnome-shell-extensions.gcampax.github.com"
         "native-window-placement@gnome-shell-extensions.gcampax.github.com"
-        "system-monitor@gnome-shell-extensions.gcampax.github.com"
         "appindicatorsupport@rgcjonas.gmail.com"
         "gsconnect@andyholmes.github.io"
         "blur-my-shell@aunetx"
