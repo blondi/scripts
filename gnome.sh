@@ -209,7 +209,7 @@ apply_settings()
         dconf write /org/gnome/desktop/background/picture-uri "'file:///usr/share/backgrounds/retro-futuristic-7.jpg'"
         dconf write /org/gnome/desktop/background/picture-uri-dark "'file:///usr/share/backgrounds/retro-futuristic-7.jpg'"
     fi
-    dconf write /org/gnome/desktop/input-sources/sources "[('xkb', 'be')]"
+    dconf write /org/gnome/desktop/input-sources/sources [('xkb', 'be'), ('xkb', 'us')]
     dconf write /org/gnome/desktop/interface/accent-color "'orange'"
     dconf write /org/gnome/desktop/interface/clock-format "'24h'"
     dconf write /org/gnome/desktop/interface/clock-show-weekday true
