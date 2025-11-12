@@ -64,26 +64,8 @@ install_extensions()
     install_extension_app_indicators
     install_extension_gsconnect
     install_extension_gnome_shell_extensions
-}
-
-install_extension_from_git_with_make()
-{
-    #$1 == git url; $2 == make target
-    if [ -z $1 ] ; then return 1 ; fi
-    
-    cd ~
-
-    git clone $1
-    folder_name=$( basename $1 .git )
-    cd $folder_name
-    if [ -z $2 ]
-    then
-        make -k
-    else
-        make -k $2
-    fi
-    cd ~
-    rm -rf ./$folder_name
+    install_extension_forge
+    install_extension_window_title_is_back
 }
 
 install_extension_from_zip()
@@ -133,6 +115,26 @@ install_extension_gsconnect()
     echo "=> Installing GSConnect..."
     gs_release=$( echo $( curl -sL https://github.com/GSConnect/gnome-shell-extension-gsconnect/releases/latest/ ) | sed -e 's/.*<title>//' -e 's/<\/title>.*//' | grep -o 'v[0-9]\{2,3\}' )
     install_extension_from_zip "https://github.com/GSConnect/gnome-shell-extension-gsconnect/releases/download/$gs_release/gsconnect@andyholmes.github.io.$gs_release.zip"
+}
+
+install_extension_forge()
+{
+    echo "=> Installing Forge..."
+    git clone https://github.com/forge-ext/forge
+    cd ./forge
+    make install
+    cd ..
+    rm -rf ./forge
+}
+
+install_extension_window_title_is_back()
+{
+    git clone https://github.com/fthx/window-title-is-back
+    cd ./window-title-is-back
+    zip -r window-title-is-back@fthx.zip .
+    gnome-extensions install window-title-is-back@fthx.zip --force
+    cd ..
+    rm -rf ./window-title-is-back
 }
 
 install_extension_gnome_shell_extensions()
@@ -274,6 +276,51 @@ apply_settings()
     dconf write /org/gnome/shell/extensions/blur-my-shell/screenshot/blur false
     dconf write /org/gnome/shell/extensions/blur-my-shell/window-list/blur false
     dconf write /org/gnome/shell/extensions/blur-my-shell/coverflow-alt-tab/blur false
+
+    #forge
+    dconf write /org/gnome/shell/extensions/forge/keybindings/window-focus-down "['<Super>j']"
+    dconf write /org/gnome/shell/extensions/forge/keybindings/window-focus-left "['<Super>h']"
+    dconf write /org/gnome/shell/extensions/forge/keybindings/window-focus-right "['<Super>l']"
+    dconf write /org/gnome/shell/extensions/forge/keybindings/window-focus-up "['<Super>k']"
+    dconf write /org/gnome/shell/extensions/forge/keybindings/window-gap-size-decrease "['<Control><Super>minus']"
+    dconf write /org/gnome/shell/extensions/forge/keybindings/window-gap-size-increase "['<Control><Super>plus']"
+    dconf write /org/gnome/shell/extensions/forge/keybindings/window-move-down "['<Shift><Super>j']"
+    dconf write /org/gnome/shell/extensions/forge/keybindings/window-move-left "['<Shift><Super>h']"
+    dconf write /org/gnome/shell/extensions/forge/keybindings/window-move-right "['<Shift><Super>l']"
+    dconf write /org/gnome/shell/extensions/forge/keybindings/window-move-up "['<Shift><Super>k']"
+    dconf write /org/gnome/shell/extensions/forge/keybindings/window-resize-bottom-decrease "['<Shift><Control><Super>i']"
+    dconf write /org/gnome/shell/extensions/forge/keybindings/window-resize-bottom-increase "['<Control><Super>u']"
+    dconf write /org/gnome/shell/extensions/forge/keybindings/window-resize-left-decrease "['<Shift><Control><Super>o']"
+    dconf write /org/gnome/shell/extensions/forge/keybindings/window-resize-left-increase "['<Control><Super>y']"
+    dconf write /org/gnome/shell/extensions/forge/keybindings/window-resize-right-decrease "['<Shift><Control><Super>y']"
+    dconf write /org/gnome/shell/extensions/forge/keybindings/window-resize-right-increase "['<Control><Super>o']"
+    dconf write /org/gnome/shell/extensions/forge/keybindings/window-resize-top-decrease "['<Shift><Control><Super>u']"
+    dconf write /org/gnome/shell/extensions/forge/keybindings/con-split-horizontal "['<Super>z']"
+    dconf write /org/gnome/shell/extensions/forge/keybindings/con-split-layout-toggle "['<Super>g']"
+    dconf write /org/gnome/shell/extensions/forge/keybindings/con-split-vertical "['<Super>v']"
+    dconf write /org/gnome/shell/extensions/forge/keybindings/con-stacked-layout-toggle "['<Shift><Super>s']"
+    dconf write /org/gnome/shell/extensions/forge/keybindings/con-tabbed-layout-toggle "['<Shift><Super>t']"
+    dconf write /org/gnome/shell/extensions/forge/keybindings/con-tabbed-showtab-decoration-toggle "['<Control><Alt>y']"
+    dconf write /org/gnome/shell/extensions/forge/keybindings/focus-border-toggle "['<Super>x']"
+    dconf write /org/gnome/shell/extensions/forge/keybindings/window-resize-top-increase "['<Control><Super>i']"
+    dconf write /org/gnome/shell/extensions/forge/keybindings/window-snap-center "['<Control><Alt>c']"
+    dconf write /org/gnome/shell/extensions/forge/keybindings/window-snap-one-third-left "['<Control><Alt>d']"
+    dconf write /org/gnome/shell/extensions/forge/keybindings/window-snap-one-third-right "['<Control><Alt>g']"
+    dconf write /org/gnome/shell/extensions/forge/keybindings/window-snap-two-third-left "['<Control><Alt>e']"
+    dconf write /org/gnome/shell/extensions/forge/keybindings/window-snap-two-third-right "['<Control><Alt>t']"
+    dconf write /org/gnome/shell/extensions/forge/keybindings/window-swap-down "['<Control><Super>j']"
+    dconf write /org/gnome/shell/extensions/forge/keybindings/window-swap-last-active "['<Super>Return']"
+    dconf write /org/gnome/shell/extensions/forge/keybindings/window-swap-left "['<Control><Super>h']"
+    dconf write /org/gnome/shell/extensions/forge/keybindings/window-swap-right "['<Control><Super>l']"
+    dconf write /org/gnome/shell/extensions/forge/keybindings/window-swap-up "['<Control><Super>k']"
+    dconf write /org/gnome/shell/extensions/forge/keybindings/window-toggle-always-float "['<Shift><Super>c']"
+    dconf write /org/gnome/shell/extensions/forge/keybindings/window-toggle-float "['<Super>c']"
+    dconf write /org/gnome/shell/extensions/forge/keybindings/workspace-active-tile-toggle "['<Shift><Super>w']"
+    dconf write /org/gnome/shell/extensions/forge/keybindings/prefs-tiling-toggle "['<Super>w']"
+
+    #window title is back
+    dconf write /org/gnome/shell/extensions/window-title-is-back/fixed-width false
+    dconf write /org/gnome/shell/extensions/window-title-is-back/show-title false
 }
 
 enable_gnome_extensions()
@@ -288,6 +335,8 @@ enable_gnome_extensions()
         "appindicatorsupport@rgcjonas.gmail.com"
         "gsconnect@andyholmes.github.io"
         "blur-my-shell@aunetx"
+        "forge@jmmaranan.com"
+        "window-title-is-back@fthx"
     )
 
     for i in ${extensions[@]}
