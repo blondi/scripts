@@ -4,7 +4,7 @@ bold=$( tput bold )
 reg=$( tput sgr0 )
 
 #YAY
-echo ${bold}INSTALLING YAY...${reg}
+notify_user "INSTALLING YAY..."
 sudo pacman -S --needed git base-devel --noconfirm
 git clone https://aur.archlinux.org/yay.git ~/yay
 cd ~/yay
@@ -13,25 +13,31 @@ cd
 rm -rf ~/yay
 
 #Installing YAY packages
-echo ${bold}INSTALLING YAY PACKAGES...${reg}
-yay -S snapper btrfs-assistant auto-cpufreq rider --noconfirm
+notify_user "INSTALLING YAY PACKAGES..."
+yay -S snapper btrfs-assistant auto-cpufreq --noconfirm
 
-echo ${bold}ENABLING AUTO CPUFREQ...${reg}
+notify_user "ENABLING AUTO CPUFREQ..."
 sudo systemctl enable auto-cpufreq.service
 
-echo ${bold}INITIATING SNAPPER...${reg}
+notify_user "INITIATING SNAPPER..."
 sudo snapper -c root create-config /
-sudo snapper -c root create --description "first snapshot"
+sudo snapper -c root create --description "Initialization"
 
 #CUSTOM SCRIPTS
-echo ${bold}LAUNCHING CUSTOM SCRIPTS...${reg}
-echo ${bold}SETTING MONITOR RESOLUTION...${reg}
+notify_user "LAUNCHING CUSTOM SCRIPTS..."
+notify_user "SETTING MONITOR RESOLUTION..."
 source ~/scripts/monitors.sh
-echo ${bold}ADDING GAME DRIVE...${reg}
+
+notify_user "ADDING GAME DRIVE..."
 [[ $( hostnamectl | grep Chassis ) =~ "desktop" ]] && source ~/scripts/mount_game_drive.sh
-echo ${bold}CONFIGURING GIT...${reg}
+
+notify_user "CONFIGURING GIT..."
 source ~/scripts/git.sh
-echo ${bold}CONFIGURING NAS...${reg}
+
+notify_user "CONFIGURING NAS..."
 source ~/scripts/nas.sh
-echo ${bold}INSTALLING GNOME EXTENSIONS...${reg}
-source ~/scripts/gnome.sh -i
+
+notify_user()
+{
+    echo ${bold}$1${reg}
+}

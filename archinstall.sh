@@ -24,13 +24,13 @@ init_install()
 {
     #KEYBOARD
     #localectl list-keymaps | grep be
-    echo ${bold}SETTING UP KEYBOARS...${reg}
+    notify_user "SETTING UP KEYBOARS..."
     loadkeys be-latin1
 
     if [[ $chassis == "laptop" ]]
     then
         #WIFI
-        echo ${bold}SETTING UP WIFI...${reg}
+        notify_user "SETTING UP WIFI..."
         #iwctl (through iwd.service)
         #[iwd] device list
         #[iwd] device [name|adatper] set-property Prowered on
@@ -50,16 +50,16 @@ init_install()
     fi
 
     #PASSWORD ROOT
-    echo ${bold}CHANGING ROOT PASSWORD...${reg}
+    notify_user "CHANGING ROOT PASSWORD..."
     passwd root
 
     #GET SCRIPTS
-    echo ${bold}GETTING SCRIPTS...${reg}
+    notify_user "GETTING SCRIPTS..."
     pacman -Sy git --needed --noconfirm
     git clone https://github.com/blondi/scripts /root/scripts
 
     #SSH
-    echo ${bold}SSH CONFIG...${reg}
+    notify_user "SSH CONFIG..."
     ipaddress=$( ip a l $net_interface | awk '/inet / {print $2}' | cut -d '/' -f1 )
     echo -e "Connect with ssh using : ssh root@$ipaddress"
 }
@@ -68,13 +68,13 @@ init_install()
 
 install()
 {
-    echo ${bold}DRIVE CONFIGURATION...${reg}
+    notify_user "DRIVE CONFIGURATION..."
     lsblk -f #identify disk to use
     echo -n "Enter disk name to use (not the partition): "
     read disk
     disk="/dev/$disk"
 
-    echo ${bold}WIPING DRIVE $disk...${reg}
+    notify_user "WIPING DRIVE $disk..."
     #wiping all on disk
     wipefs -af $disk
     sgdisk --zap-all --clear $disk
@@ -82,7 +82,7 @@ install()
     #Overwrite existing data with zeros
     dd if=/dev/zero of=$disk oflag=direct bs=1M status=progress
 
-    echo ${bold}PARTITIONING DRIVE...${reg}
+    notify_user "PARTITIONING DRIVE..."
     #use 512MiB if grub for ef00
     sgdisk -n 1:0:+1GiB -t 1:ef00 -c 1:ESP -n 2:0:0 -t 2:8309 -c 2:LUKS $disk
     partprobe $disk
@@ -96,9 +96,9 @@ install()
     mkfs.vfat -F 32 -n Archboot ${disk}1
 
     #[LUKS BTRFS]
-    echo ${bold}SETTING UP ENCRYPTION...${reg}
+    notify_user "SETTING UP ENCRYPTION..."
     cryptsetup -v -y --type luks2 luksFormat ${disk}2 --label Archlinux
-    echo ${bold}OPENING ENCRYPTED DRIVE...${reg}
+    notify_user "OPENING ENCRYPTED DRIVE..."
     cryptsetup open ${disk}2 root
 
     mkfs.btrfs -L Archroot /dev/mapper/root
@@ -124,30 +124,30 @@ install()
 
     #TIMEZONE
     #timedatectl list-timezones | grep Brussel
-    echo ${bold}SETTING UP TIMEZONE...${reg}
+    notify_user "SETTING UP TIMEZONE..."
     timedatectl set-timezone Europe/Brussels
     timedatectl set-ntp true
     timedatectl status
 
     #MIRRORS
-    echo ${bold}SETTING UP PACMAN MIRRORS...${reg}
+    notify_user "SETTING UP PACMAN MIRRORS..."
     reflector --save /etc/pacman.d/mirrorlist --country Belgium,Germany --protocol https --latest 5 --sort rate --download-timeout 60
 
     #PACKAGES
     #todo : include microcode for amd as well based on CPU detection
-    echo ${bold}INSTALLING BASE PACKAGES...${reg}
+    notify_user "INSTALLING BASE PACKAGES..."
     pacstrap /mnt base base-devel linux linux-headers linux-firmware btrfs-progs cryptsetup lvm2 intel-ucode git vim
 
     #FILE SYSTEM TABLE
-    echo ${bold}GENERATING FILE SYSTEM TABLE...${reg}
+    notify_user "GENERATING FILE SYSTEM TABLE..."
     genfstab -U -p /mnt >> /mnt/etc/fstab
 
     #step into the system
     cp -r /root/scripts /mnt/root/scripts
-    echo ${bold}ARCH-CHROOTING...${reg}
+    notify_user "ARCH-CHROOTING..."
     arch-chroot /mnt /bin/bash "./root/scripts/archroot.sh"
 
-    echo ${bold}ENDING SCRIPT...${reg}
+    notify_user "ENDING SCRIPT..."
     rm -rf /root/scripts
     rm -rf /mnt/root/scripts
     umount -R /mnt
@@ -163,8 +163,13 @@ post_install()
     read
 
     #GNOME install
-    echo ${bold}CONFIGURING GNOME ECOSYSTEM...${reg}
+    notify_user "CONFIGURING GNOME ECOSYSTEM..."
     source ~/scripts/gnome.sh -c
+}
+
+notify_user()
+{
+    echo ${bold}$1${reg}
 }
 
 #------------------------------------------------------------------------
