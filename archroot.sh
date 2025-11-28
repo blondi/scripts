@@ -3,6 +3,8 @@
 bold=$( tput bold )
 reg=$( tput sgr0 )
 
+echo ${bold}"TEST PARAM: you have sent $1..."${reg}
+
 #PACMAN
 echo ${bold}"SETTING UP PACMAN..."${reg}
 insert_at=$(( $( grep -n "#Color" /etc/pacman.conf | cut -d ":" -f1 ) + 1 ))

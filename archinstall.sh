@@ -135,6 +135,8 @@ install()
 
     #PACKAGES
     #todo : include microcode for amd as well based on CPU detection
+    #avoid crash if vconsole doesn't exists
+    echo "#KEYMAP=us" > /mnt/etc/vconsole.conf
     echo ${bold}"INSTALLING BASE PACKAGES..."${reg}
     pacstrap /mnt base base-devel linux linux-headers linux-firmware btrfs-progs cryptsetup lvm2 intel-ucode git vim
 
@@ -145,7 +147,7 @@ install()
     #step into the system
     cp -r /root/scripts /mnt/root/scripts
     echo ${bold}"ARCH-CHROOTING..."${reg}
-    arch-chroot /mnt /bin/bash "./root/scripts/archroot.sh"
+    arch-chroot /mnt /bin/bash "./root/scripts/archroot.sh" "usorbe"
 
     echo ${bold}"ENDING SCRIPT..."${reg}
     rm -rf /root/scripts
