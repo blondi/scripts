@@ -114,12 +114,13 @@ console-mode max
 editor yes
 EOF
 
+uuid=$( blkid -s UUID -o value $( blkid -L ARCHROOT ) )
 cat > /boot/loader/entries/arch.conf <<EOF
 title Arch Linux (linux)
 linux /vmlinuz-linux
 initrd /initramfs-linux.img
 initrd /intel-ucode.img
-options cryptdevice=LABEL=ARCHLINUX:root root=/dev/mapper/root rootflags=subvol=@ rw rootfstype=btrfs
+options cryptdevice=LABEL=ARCHLINUX:root root=UUID=$uuid rootflags=subvol=@ rw rootfstype=btrfs
 EOF
 
 bootctl list
