@@ -6,7 +6,7 @@
 
 # computer type
 chassis=$( hostnamectl chassis )
-net_interface=$( ls /sys/class/net | grep -v "lo" )
+net_interface=$( ls /sys/class/net | grep -v "lo" -m 1 )
 bold=$( tput bold )
 reg=$( tput sgr0 )
 
