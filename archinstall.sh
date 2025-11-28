@@ -15,6 +15,7 @@ system_info=
 cpu=
 gpu=
 de=
+keychoice=
 
 ################
 # INSTALLATION #
@@ -25,7 +26,6 @@ init_install()
     #KEYBOARD
     #localectl list-keymaps | grep be
     echo ${bold}"SETTING UP KEYBOARS..."${reg}
-    loadkeys be-latin1
 
     if [[ $chassis == "laptop" ]]
     then
@@ -93,15 +93,15 @@ install()
 
     # formatting partitions
     #[EFI]
-    mkfs.vfat -F 32 -n Archboot ${disk}1
+    mkfs.vfat -F 32 -n ARCHBOOT ${disk}1
 
     #[LUKS BTRFS]
     echo ${bold}"SETTING UP ENCRYPTION..."${reg}
-    cryptsetup -v -y --type luks2 luksFormat ${disk}2 --label Archlinux
+    cryptsetup -v -y --type luks2 luksFormat ${disk}2 --label ARCHLINUX
     echo ${bold}"OPENING ENCRYPTED DRIVE..."${reg}
     cryptsetup open ${disk}2 root
 
-    mkfs.btrfs -L Archroot /dev/mapper/root
+    mkfs.btrfs -L ARCHROOT /dev/mapper/root
 
     #[BTRFS SUB VOLUMES]
     mount /dev/mapper/root /mnt
@@ -147,7 +147,7 @@ install()
     #step into the system
     cp -r /root/scripts /mnt/root/scripts
     echo ${bold}"ARCH-CHROOTING..."${reg}
-    arch-chroot /mnt /bin/bash "./root/scripts/archroot.sh" "usorbe"
+    arch-chroot /mnt /bin/bash "./root/scripts/archroot.sh" "$keychoice"
 
     echo ${bold}"ENDING SCRIPT..."${reg}
     rm -rf /root/scripts
@@ -178,6 +178,8 @@ then
     exit 2
 elif [[ $1 == "-i" ]]
 then
+    echo -n "Enter keyboard layout (be|us): "
+    read keychoice
     if [[ ! -z $2 && $2 == '-ssh' ]]
     then
         [[ -d  /root/scripts ]] && install || init_install

@@ -45,10 +45,12 @@ EOF
 locale-gen
 
 #CONSOLE
+keymap=$( [[ $1 =~ "us" ]] && echo "us" || echo "be-latin1" )
+keylay=$( [[ $1 =~ "us" ]] && echo "us" || echo "be" )
 echo ${bold}"SETTING UP CONSOLE..."${reg}
 echo "FONT=eurlatgr" >> /etc/vconsole.conf
-echo "KEYMAP=be-latin1" >> /etc/vconsole.conf
-echo "XKBLAYOUT=be" >> /etc/vconsole.conf
+echo "KEYMAP=$keymap" >> /etc/vconsole.conf
+echo "XKBLAYOUT=$keylay" >> /etc/vconsole.conf
 
 #EDITOR
 echo ${bold}"SETTING UP EDITOR..."${reg}
@@ -112,12 +114,13 @@ console-mode max
 editor yes
 EOF
 
+uuid=$( blkid -s UUID -o value /dev/sda2 )
 cat > /boot/loader/entries/arch.conf <<EOF
 title Arch Linux (linux)
 linux /vmlinuz-linux
 initrd /initramfs-linux.img
 initrd /intel-ucode.img
-options cryptdevice=LABEL=Archlinux:root root=/dev/mapper/root rootflags=subvol=@ rw rootfstype=btrfs
+options cryptdevice=LABEL=ARCHLINUX:root root=/dev/mapper/root rootflags=subvol=@ rw rootfstype=btrfs
 EOF
 
 bootctl list
@@ -140,7 +143,7 @@ EOF
 echo ${bold}"RENAMING EFI..."${reg}
 #rename EFI entry
 archboot=$( efibootmgr | grep Archlinux | cut -d " " -f1 | grep -o -E "[0-9]+" )
-bootpath=$( blkid | grep Archboot | cut -d ":" -f1 )
+bootpath=$( blkid | grep ARCHBOOT | cut -d ":" -f1 )
 efibootmgr -b $archboot -B #delete current entry
 efibootmgr -c -d $([[ $bootpath =~ "nvme" ]] && echo ${bootpath::-2} || echo ${bootpath::-1}) -p ${bootpath:$(( ${#bootpath} - 1 ))} -L "Archlinux" -l "\EFI\BOOT\BOOTX64.EFI" --index 0
 
