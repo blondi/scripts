@@ -120,10 +120,6 @@ initrd /intel-ucode.img
 options cryptdevice=LABEL=Archlinux:root root=/dev/mapper/root rootflags=subvol=@ rw rootfstype=btrfs
 EOF
 
-cp /boot/loader/entries/arch.conf /boot/loader/entries/arch-fallback.conf
-sed -i "s/(linux)/(linux-fallback)/g" /boot/loader/entries/arch-fallback.conf
-sed -i "s/linux.img/linux-fallback.img/g" /boot/loader/entries/arch-fallback.conf
-
 bootctl list
 mkdir /home/blondi/scripts
 
