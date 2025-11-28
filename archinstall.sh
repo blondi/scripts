@@ -24,13 +24,13 @@ init_install()
 {
     #KEYBOARD
     #localectl list-keymaps | grep be
-    notify_user "SETTING UP KEYBOARS..."
+    echo ${bold}"SETTING UP KEYBOARS..."${reg}
     loadkeys be-latin1
 
     if [[ $chassis == "laptop" ]]
     then
         #WIFI
-        notify_user "SETTING UP WIFI..."
+        echo ${bold}"SETTING UP WIFI..."${reg}
         #iwctl (through iwd.service)
         #[iwd] device list
         #[iwd] device [name|adatper] set-property Prowered on
@@ -50,16 +50,16 @@ init_install()
     fi
 
     #PASSWORD ROOT
-    notify_user "CHANGING ROOT PASSWORD..."
+    echo ${bold}"CHANGING ROOT PASSWORD..."${reg}
     passwd root
 
     #GET SCRIPTS
-    notify_user "GETTING SCRIPTS..."
+    echo ${bold}"GETTING SCRIPTS..."${reg}
     pacman -Sy git --needed --noconfirm
     git clone https://github.com/blondi/scripts /root/scripts
 
     #SSH
-    notify_user "SSH CONFIG..."
+    echo ${bold}"SSH CONFIG..."${reg}
     ipaddress=$( ip a l $net_interface | awk '/inet / {print $2}' | cut -d '/' -f1 )
     echo -e "Connect with ssh using : ssh root@$ipaddress"
 }
@@ -68,13 +68,13 @@ init_install()
 
 install()
 {
-    notify_user "DRIVE CONFIGURATION..."
+    echo ${bold}"DRIVE CONFIGURATION..."${reg}
     lsblk -f #identify disk to use
     echo -n "Enter disk name to use (not the partition): "
     read disk
     disk="/dev/$disk"
 
-    notify_user "WIPING DRIVE $disk..."
+    echo ${bold}"WIPING DRIVE $disk..."${reg}
     #wiping all on disk
     wipefs -af $disk
     sgdisk --zap-all --clear $disk
@@ -82,7 +82,7 @@ install()
     #Overwrite existing data with zeros
     dd if=/dev/zero of=$disk oflag=direct bs=1M status=progress
 
-    notify_user "PARTITIONING DRIVE..."
+    echo ${bold}"PARTITIONING DRIVE..."${reg}
     #use 512MiB if grub for ef00
     sgdisk -n 1:0:+1GiB -t 1:ef00 -c 1:ESP -n 2:0:0 -t 2:8309 -c 2:LUKS $disk
     partprobe $disk
@@ -96,9 +96,9 @@ install()
     mkfs.vfat -F 32 -n Archboot ${disk}1
 
     #[LUKS BTRFS]
-    notify_user "SETTING UP ENCRYPTION..."
+    echo ${bold}"SETTING UP ENCRYPTION..."${reg}
     cryptsetup -v -y --type luks2 luksFormat ${disk}2 --label Archlinux
-    notify_user "OPENING ENCRYPTED DRIVE..."
+    echo ${bold}"OPENING ENCRYPTED DRIVE..."${reg}
     cryptsetup open ${disk}2 root
 
     mkfs.btrfs -L Archroot /dev/mapper/root
@@ -124,30 +124,30 @@ install()
 
     #TIMEZONE
     #timedatectl list-timezones | grep Brussel
-    notify_user "SETTING UP TIMEZONE..."
+    echo ${bold}"SETTING UP TIMEZONE..."${reg}
     timedatectl set-timezone Europe/Brussels
     timedatectl set-ntp true
     timedatectl status
 
     #MIRRORS
-    notify_user "SETTING UP PACMAN MIRRORS..."
+    echo ${bold}"SETTING UP PACMAN MIRRORS..."${reg}
     reflector --save /etc/pacman.d/mirrorlist --country Belgium,Germany --protocol https --latest 5 --sort rate --download-timeout 60
 
     #PACKAGES
     #todo : include microcode for amd as well based on CPU detection
-    notify_user "INSTALLING BASE PACKAGES..."
+    echo ${bold}"INSTALLING BASE PACKAGES..."${reg}
     pacstrap /mnt base base-devel linux linux-headers linux-firmware btrfs-progs cryptsetup lvm2 intel-ucode git vim
 
     #FILE SYSTEM TABLE
-    notify_user "GENERATING FILE SYSTEM TABLE..."
+    echo ${bold}"GENERATING FILE SYSTEM TABLE..."${reg}
     genfstab -U -p /mnt >> /mnt/etc/fstab
 
     #step into the system
     cp -r /root/scripts /mnt/root/scripts
-    notify_user "ARCH-CHROOTING..."
+    echo ${bold}"ARCH-CHROOTING..."${reg}
     arch-chroot /mnt /bin/bash "./root/scripts/archroot.sh"
 
-    notify_user "ENDING SCRIPT..."
+    echo ${bold}"ENDING SCRIPT..."${reg}
     rm -rf /root/scripts
     rm -rf /mnt/root/scripts
     umount -R /mnt
@@ -161,15 +161,6 @@ post_install()
     systemctl --failed
     journalctl -p 3 -xb
     read
-
-    #GNOME install
-    notify_user "CONFIGURING GNOME ECOSYSTEM..."
-    source ~/scripts/gnome.sh -c
-}
-
-notify_user()
-{
-    echo ${bold}$1${reg}
 }
 
 #------------------------------------------------------------------------
@@ -178,10 +169,10 @@ clear
 echo "###############################"
 echo "# ARCHLINUX automation script #"
 echo "###############################"
-if ! [[ "$1" =~ ^(-i|-r|-c)$ ]]
+if ! [[ "$1" =~ ^(-i|-c)$ ]]
 then
     echo "Mode not detected!"
-    echo "Use "-i" to install, "-r" for gnome specific install and "-c" to configure after the install parts."
+    echo "Use "-i" to install and "-c" to check after the install parts."
     exit 2
 elif [[ $1 == "-i" ]]
 then

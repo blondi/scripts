@@ -4,7 +4,7 @@ bold=$( tput bold )
 reg=$( tput sgr0 )
 
 #PACMAN
-notify_user "SETTING UP PACMAN..."
+echo ${bold}"SETTING UP PACMAN..."${reg}
 insert_at=$(( $( grep -n "#Color" /etc/pacman.conf | cut -d ":" -f1 ) + 1 ))
 sed -i "$insert_at i ILoveCandy" /etc/pacman.conf #ILoveCandy
 sed -i '/#Color/s/^#//g' /etc/pacman.conf #Color
@@ -16,13 +16,13 @@ sed -i "$insert_at s/^#//g" /etc/pacman.conf #2nd
 pacman -Sy #to update multilib
 
 #HOSTNAME
-notify_user "SETTING UP HOSTNAME..."
+echo ${bold}"SETTING UP HOSTNAME..."${reg}
 hostname="arch"
 echo $hostname >> /etc/hostname
 echo -e "127.0.1.1\t $hostname.localdomain $hostname" >> /etc/hosts
 
 #LOCALE
-notify_user "SETTING UP LOCALE..."
+echo ${bold}"SETTING UP LOCALE..."${reg}
 ln -sF /usr/share/zoneinfo/Europe/Brussels /etc/localtime
 hwclock --systohc
 sed -i '/#en_US.UTF-8/s/^#//g' /etc/locale.gen
@@ -43,18 +43,18 @@ EOF
 locale-gen
 
 #CONSOLE
-notify_user "SETTING UP CONSOLE..."
+echo ${bold}"SETTING UP CONSOLE..."${reg}
 echo "FONT=eurlatgr" >> /etc/vconsole.conf
 echo "KEYMAP=be-latin1" >> /etc/vconsole.conf
 echo "XKBLAYOUT=be" >> /etc/vconsole.conf
 
 #EDITOR
-notify_user "SETTING UP EDITOR..."
+echo ${bold}"SETTING UP EDITOR..."${reg}
 echo "EDITOR=vim" >> /etc/environment
 echo "VISUAL=vim" >> /etc/environment
 
 #USER
-notify_user "CREATING USER..."
+echo ${bold}"CREATING USER..."${reg}
 echo -n "New user name: "
 read user
 useradd -m -g users -G wheel -s /bin/bash $user
@@ -62,28 +62,28 @@ passwd $user
 echo "$user ALL=(ALL:ALL) ALL" >> /etc/sudoers.d/$user
 
 #PASSWORD ROOT
-notify_user "CHANGING ROOT PASSWORD..."
+echo ${bold}"CHANGING ROOT PASSWORD..."${reg}
 passwd root
 
 #SCRIPTS
-notify_user "MOVING SCRIPTS..."
+echo ${bold}"MOVING SCRIPTS..."${reg}
 cp -r /root/scripts /home/blondi/
 
 #SYS INFO
-notify_user "COLLECTING INFO..."
+echo ${bold}"COLLECTING INFO..."${reg}
 system_info=$( source /home/blondi/scripts/system_info.sh )
 cpu=$( echo -e "$system_info" | grep CPU | cut -d "=" -f2 )
 gpu=$( echo -e "$system_info" | grep GPU | cut -d "=" -f2 )
 de=$( echo -e "$system_info" | grep DE | cut -d "=" -f2 )
 
 #PACKAGES
-notify_user "INSTALLING PACKAGES..."
+echo ${bold}"INSTALLING PACKAGES..."${reg}
 packages="man-db man-pages efibootmgr networkmanager network-manager-applet zram-generator acpid polkit reflector sudo openssh htop fastfetch bash-completion ttf-meslo-nerd firefox pipewire-jack lib32-pipewire-jack code bitwarden solaar lm_sensors steam"
 [[ $gpu == "nvidia" ]] && packages+=" nvidia-dkms nvidia-utils lib32-nvidia-utils egl-wayland"
 pacman -S --needed $packages --noconfirm
 
 #SERVICES
-notify_user "ENABLING SERVICES..."
+echo ${bold}"ENABLING SERVICES..."${reg}
 systemctl enable NetworkManager #network
 systemctl enable reflector.timer
 systemctl enable fstrim.timer #optimization ssd
@@ -94,14 +94,14 @@ systemctl enable acpid
 
 #INIT RAM DISK
 #=> todo: check for hyperland only: if nvidia, add also after btrfs nvidia nvidia_modeset nvidia_uvm nvidia_drm ???
-notify_user "INIT RAM DISK..."
+echo ${bold}"INIT RAM DISK..."${reg}
 sed -i "/^MODULES=/ s/([^)]*)/(btrfs)/g" /etc/mkinitcpio.conf
 sed -i "/^BINARIES=/ s/([^)]*)/(\/usr\/bin\/btrfs)/g" /etc/mkinitcpio.conf
 sed -i "/^HOOKS=/ s/filesystems/encrypt lvm2 filesystems/g" /etc/mkinitcpio.conf
 mkinitcpio -p linux
 
 #SYSTEMD BOOT
-notify_user "SETTING UP SYSTEMD BOOT..."
+echo ${bold}"SETTING UP SYSTEMD BOOT..."${reg}
 bootctl --esp-path=/boot install
 cat > /boot/loader/loader.conf <<EOF
 default arch.conf
@@ -139,7 +139,7 @@ When = PostTransaction
 Exec = /usr/bin/systemctl restart systemd-boot-update.service
 EOF
 
-notify_user "RENAMING EFI..."
+echo ${bold}"RENAMING EFI..."${reg}
 #rename EFI entry
 archboot=$( efibootmgr | grep Archlinux | cut -d " " -f1 | grep -o -E "[0-9]+" )
 bootpath=$( blkid | grep Archboot | cut -d ":" -f1 )
@@ -147,7 +147,7 @@ efibootmgr -b $archboot -B #delete current entry
 efibootmgr -c -d $([[ $bootpath =~ "nvme" ]] && echo ${bootpath::-2} || echo ${bootpath::-1}) -p ${bootpath:$(( ${#bootpath} - 1 ))} -L "Archlinux" -l "\EFI\BOOT\BOOTX64.EFI" --index 0
 
 #ZRAM
-notify_user "SETTING UP ZRAM..."
+echo ${bold}"SETTING UP ZRAM..."${reg}
 cat > /etc/systemd/zram-generator.conf <<EOF
 [zram0]
 zram-size = min(ram / 2, 8192)
@@ -156,11 +156,6 @@ EOF
 systemctl enable systemd-zram-setup@zram0.service
 
 #SWITCH USER
-notify_user "SWITCHING TO USER..."
+echo ${bold}"SWITCHING TO USER..."${reg}
 chown -R blondi:wheel /home/blondi/scripts/
 sudo -S -u blondi -i /bin/bash -c 'source /home/blondi/scripts/archuser.sh'
-
-notify_user()
-{
-    echo ${bold}$1${reg}
-}
