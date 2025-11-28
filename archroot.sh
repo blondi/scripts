@@ -120,11 +120,11 @@ title Arch Linux (linux)
 linux /vmlinuz-linux
 initrd /initramfs-linux.img
 initrd /intel-ucode.img
-options cryptdevice=LABEL=ARCHLINUX:root root=UUID=$uuid rootflags=subvol=@ rw rootfstype=btrfs
+options rd.luks.name=$uuid=root root=/dev/mapper/root rootflags=subvol=@ rw rootfstype=btrfs
 EOF
 
+bootctl update
 bootctl list
-mkdir /home/blondi/scripts
 
 #update hook
 sudo mkdir /etc/pacman.d/hooks
