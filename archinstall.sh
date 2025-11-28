@@ -6,7 +6,7 @@
 
 # computer type
 chassis=$( hostnamectl chassis )
-net_interface=$( ls /sys/class/net | grep -v "lo" -m 1 )
+net_interface=$( lspci | grep -iE 'wifi|wireless' )
 bold=$( tput bold )
 reg=$( tput sgr0 )
 
@@ -27,7 +27,7 @@ init_install()
     #localectl list-keymaps | grep be
     echo ${bold}"SETTING UP KEYBOARS..."${reg}
 
-    if [[ $chassis == "laptop" ]]
+    if [[ ! -z $net_interface ]]
     then
         #WIFI
         echo ${bold}"SETTING UP WIFI..."${reg}
@@ -36,14 +36,14 @@ init_install()
         #[iwd] device [name|adatper] set-property Prowered on
         wifipass=
         ssid=
-        iwctl station $net_interface scan
-        iwctl station $net_interface get-networks
+        iwctl station wlan0 scan
+        iwctl station wlan0 get-networks
         echo -n "Enter SSID: " 
         read ssid
         echo -n "Enter WiFi passphrase: "
         read -s wifipass
         echo #escape for secret
-        iwctl station $net_interface connect $ssid --passphrase $wifipass
+        iwctl station wlan0 connect $ssid --passphrase $wifipass
         wifipass=
         ssid=
         ping -c3 www.archlinux.org
