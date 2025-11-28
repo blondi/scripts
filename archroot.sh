@@ -114,7 +114,6 @@ console-mode max
 editor yes
 EOF
 
-uuid=$( blkid -s UUID -o value /dev/sda2 )
 cat > /boot/loader/entries/arch.conf <<EOF
 title Arch Linux (linux)
 linux /vmlinuz-linux
