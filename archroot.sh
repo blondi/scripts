@@ -80,7 +80,7 @@ de=$( echo -e "$system_info" | grep DE | cut -d "=" -f2 )
 
 #PACKAGES
 echo ${bold}"INSTALLING PACKAGES..."${reg}
-packages="man-db man-pages efibootmgr networkmanager network-manager-applet zram-generator acpid polkit reflector sudo openssh htop fastfetch bash-completion ttf-meslo-nerd firefox pipewire-jack lib32-pipewire-jack code bitwarden solaar lm_sensors steam"
+packages="man-db man-pages efibootmgr bluez networkmanager network-manager-applet zram-generator acpid polkit reflector sudo openssh htop fastfetch bash-completion ttf-meslo-nerd firefox pipewire-jack lib32-pipewire-jack code bitwarden solaar lm_sensors steam"
 [[ $gpu == "nvidia" ]] && packages+=" nvidia-dkms nvidia-utils lib32-nvidia-utils egl-wayland"
 pacman -S --needed $packages --noconfirm
 
